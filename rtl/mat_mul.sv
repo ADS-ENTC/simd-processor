@@ -18,7 +18,7 @@ for (m1_row_num = 0; m1_row_num < N; m1_row_num = m1_row_num + 1) begin: m1_row_
     for (m2_col_num = 0; m2_col_num < N; m2_col_num++) begin: m2_col_iter
 
         // multiplication stage
-        for (d0_item_num = 0; d0_item_num < N; d0_item_num++) begin: item
+        for (d0_item_num = 0; d0_item_num < N; d0_item_num++) begin: d0_item_iter
             assign partial_sum[m1_row_num][m2_col_num][0][d0_item_num] = $signed(matrix_1[m1_row_num][d0_item_num]) * $signed(matrix_2[d0_item_num][m2_col_num]);
         end
         
