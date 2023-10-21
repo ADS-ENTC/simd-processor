@@ -3,11 +3,11 @@
 module mat_mul_tb;
     localparam W_IN = 8;
     localparam W_OUT = 32;
-    localparam N = 4;
+    localparam N = 8;
 
     localparam delay = $clog2(N) + 1;
 
-    logic clk, cen;
+    logic clk, cen, valid_in, valid_out;
     logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_1, matrix_2;
     logic signed [N-1:0][N-1:0][W_OUT-1:0] result, exp_result;
 
@@ -23,6 +23,7 @@ module mat_mul_tb;
     initial begin
         $srandom(56);
         cen = 1;
+        valid_in = 1;
         repeat (10) begin
             repeat (2) @(posedge clk);
             
