@@ -4,14 +4,15 @@ module mat_mul #(
     parameter N = 2 // N*N matrix
 )(
     input logic clk, cen, valid_in,
-    input logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_1, matrix_2,
+    input logic signed [W_IN-1:0] matrix_1 [N][N], 
+    input logic signed [W_IN-1:0] matrix_2 [N][N],
     output logic valid_out,
-    output logic signed [N-1:0][N-1:0][W_OUT-1:0] result
+    output logic signed [W_OUT-1:0] result [N][N]
 );
 
 localparam DEPTH = $clog2(N); // number of summation stages
 
-logic signed [N-1:0][N-1:0][DEPTH:0][N-1:0][W_OUT-1:0] partial_sum; // holds the intermediate values of the summation stages
+logic signed [W_OUT-1:0] partial_sum [N][N][DEPTH+1][N]; // holds the intermediate values of the summation stages
 logic valid_buffer[DEPTH+1]; // holds the valid signal for each summation stage
 
 genvar m1_row_num, m2_col_num, d0_item_num, depth, item_num;
