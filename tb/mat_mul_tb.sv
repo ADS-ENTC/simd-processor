@@ -8,10 +8,10 @@ module mat_mul_tb;
     localparam delay = $clog2(N) + 1;
 
     logic clk, cen, valid_in, valid_out, mode;
-    logic signed [W_IN-1:0] matrix_1 [N][N];
-    logic signed [W_IN-1:0] matrix_2 [N][N];
-    logic signed [W_OUT-1:0] result [N][N];
-    logic signed [W_OUT-1:0] exp_result [N][N];
+    logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_1;
+    logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_2;
+    logic signed [N-1:0][N-1:0][W_OUT-1:0] result;
+    logic signed [N-1:0][N-1:0][W_OUT-1:0] exp_result;
 
     mat_mul #(.W_IN(W_IN), .W_OUT(W_OUT), .N(N)) dut (.*);
 

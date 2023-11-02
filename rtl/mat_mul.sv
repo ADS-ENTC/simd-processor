@@ -4,10 +4,10 @@ module mat_mul #(
     parameter N = 2 // N*N matrix
 )(
     input logic clk, cen, valid_in,  mode,
-    input logic signed [W_IN-1:0] matrix_1 [N][N], 
-    input logic signed [W_IN-1:0] matrix_2 [N][N],
+    input logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_1, 
+    input logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_2,
     output logic valid_out,
-    output logic signed [W_OUT-1:0] result [N][N]
+    output logic signed [N-1:0][N-1:0][W_OUT-1:0] result
 );
 
 localparam DEPTH = $clog2(N); // number of summation stages for multiplication
@@ -51,7 +51,7 @@ for (m1_row_num = 0; m1_row_num < N; m1_row_num = m1_row_num + 1) begin: m1_row_
             if (mode == 0'b0)
                 result[m1_row_num][m2_col_num] = partial_sum[m1_row_num][m2_col_num][DEPTH][0];
             else
-                result[m1_row_num][m2_col_num] = matrix_1[m1_row_num][m2_col_num] + matrix_2[m1_row_num][m2_col_num];
+                result[m1_row_num][m2_col_num] = $signed(matrix_1[m1_row_num][m2_col_num]) + $signed(matrix_2[m1_row_num][m2_col_num]);
         end
     end
 end
