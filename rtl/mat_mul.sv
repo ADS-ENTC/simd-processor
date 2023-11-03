@@ -37,7 +37,7 @@ for (m1_row_num = 0; m1_row_num < N; m1_row_num = m1_row_num + 1) begin: m1_row_
             for (item_num = 0; item_num < N/2**(depth+1); item_num++) begin: item_iter
                 always_ff @(posedge clk) begin
                   if (resetn) begin
-                    partial_sum[m1_row_num][m2_col_num][depth+1][item_num] <= partial_sum[m1_row_num][m2_col_num][depth][2*item_num] + partial_sum[m1_row_num][m2_col_num][depth][2*item_num+1];
+                    partial_sum[m1_row_num][m2_col_num][depth+1][item_num] <= $signed(partial_sum[m1_row_num][m2_col_num][depth][2*item_num]) + $signed(partial_sum[m1_row_num][m2_col_num][depth][2*item_num+1]);
                     valid_buffer[depth+1] <= valid_buffer[depth];
                   end
                 end
@@ -58,12 +58,12 @@ always_ff@(posedge clk  or negedge resetn) begin
     else if (valid_buffer[DEPTH]) begin
         for (int i=0; i<N; i++) begin
             for (int j=0; j<N; j++) begin
-                result[i][j] <= result[i][j] + partial_sum[i][j][DEPTH][0];
+                result[i][j] <= $signed(result[i][j]) + $signed(partial_sum[i][j][DEPTH][0]);
             end
         end
-
-        valid_out <= 1'b1;
     end
+
+    valid_out <= valid_buffer[DEPTH];
 end
 
 endmodule
