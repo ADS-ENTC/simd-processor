@@ -1,7 +1,7 @@
 module mat_mul_wrapper#(
-    parameter W_IN = 8;
-    parameter W_OUT = 32;
-    parameter N = 8;
+    parameter W_IN = 8,
+    parameter W_OUT = 32,
+    parameter N = 8
 )(
     input wire clk, cen, valid_in, mode,
     input wire signed [N-1:0][N-1:0][W_IN-1:0] matrix_1, 
