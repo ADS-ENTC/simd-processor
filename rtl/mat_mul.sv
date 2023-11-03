@@ -3,7 +3,7 @@ module mat_mul #(
     parameter W_OUT = 32,
     parameter N = 2 // N*N matrix
 )(
-    input logic clk, cen, valid_in,
+    input logic clk, resetn, valid_in,
     input logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_1, matrix_2,
     output logic valid_out,
     output logic signed [N-1:0][N-1:0][W_OUT-1:0] result
@@ -36,17 +36,34 @@ for (m1_row_num = 0; m1_row_num < N; m1_row_num = m1_row_num + 1) begin: m1_row_
         for (depth = 0; depth < DEPTH; depth++) begin: depth_iter
             for (item_num = 0; item_num < N/2**(depth+1); item_num++) begin: item_iter
                 always_ff @(posedge clk) begin
-                  if (cen) begin
+                  if (resetn) begin
                     partial_sum[m1_row_num][m2_col_num][depth+1][item_num] <= partial_sum[m1_row_num][m2_col_num][depth][2*item_num] + partial_sum[m1_row_num][m2_col_num][depth][2*item_num+1];
                     valid_buffer[depth+1] <= valid_buffer[depth];
                   end
                 end
             end
         end
-
-        assign result[m1_row_num][m2_col_num] = partial_sum[m1_row_num][m2_col_num][DEPTH][0];
-        assign valid_out = valid_buffer[DEPTH];
     end
 end
 endgenerate
+
+always_ff@(posedge clk  or negedge resetn) begin
+    if (resetn == 0'b0) begin
+        for (int i=0; i<N; i++) begin
+            for (int j=0; j<N; j++) begin
+                result[i][j] <= 0;
+            end
+        end
+    end
+    else if (valid_buffer[DEPTH]) begin
+        for (int i=0; i<N; i++) begin
+            for (int j=0; j<N; j++) begin
+                result[i][j] <= result[i][j] + partial_sum[i][j][DEPTH][0];
+            end
+        end
+
+        valid_out <= 1'b1;
+    end
+end
+
 endmodule
