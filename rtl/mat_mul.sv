@@ -3,7 +3,7 @@ module mat_mul #(
     parameter W_OUT = 32,
     parameter N = 2 // N*N matrix
 )(
-    input logic clk, cen, valid_in,  mode,
+    input logic clk, cen, valid_in, mode,
     input logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_1, 
     input logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_2,
     output logic valid_out,
