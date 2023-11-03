@@ -1,17 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+
+#define UINT8 1
+#define UINT32 4
 
 #define MAT_SIZE 32
 #define PE_MAT_SIZE 8
 
-#define MEM_ORD_ADDR (3 * MAT_SIZE * MAT_SIZE)
-#define MEM_TMP_ADDR (6 * MAT_SIZE * MAT_SIZE)
 #define PE_COUNT (MAT_SIZE / PE_MAT_SIZE)
-#define MEM_LENGTH (MEM_TMP_ADDR + 2 * PE_COUNT * PE_MAT_SIZE * PE_MAT_SIZE)
 
-typedef unsigned int uint32;
+#define MEM8_ORD_ADDR (2 * MAT_SIZE * MAT_SIZE * UINT8)
+#define MEM8_LENGTH (4 * MAT_SIZE * MAT_SIZE * UINT8)
 
-uint32 mem[MEM_LENGTH];
+#define MEM32_ORD_ADDR (MAT_SIZE * MAT_SIZE * UINT32)
+#define MEM32_TMP_ADDR (2 * MAT_SIZE * MAT_SIZE * UINT32)
+#define MEM32_LENGTH (MEM32_TMP_ADDR + 2 * PE_COUNT *PE_MAT_SIZE *PE_MAT_SIZE*UINT32)
+
+uint8_t mem8[MEM8_LENGTH];
+uint32_t mem32[MEM32_LENGTH];
 
 void order_mat(int source, int target)
 {
@@ -92,7 +99,7 @@ void Display_mat(int ptr, int mat_size)
 
 void Display_all(int base, int mat_size)
 {
-    for (int ptr = base; ptr < MEM_LENGTH; ptr += mat_size * mat_size)
+    for (int ptr = base; ptr < MEM8_LENGTH; ptr += mat_size * mat_size)
     {
         Display_mat(ptr, mat_size);
         printf("\n");
@@ -109,11 +116,11 @@ int main()
     int mat1_ptr = 0;
     int mat2_ptr = mat1_ptr + MAT_SIZE * MAT_SIZE;
     int matAns_ptr = mat2_ptr + MAT_SIZE * MAT_SIZE;
-    int mat1_ord_ptr = MEM_ORD_ADDR + mat1_ptr;
-    int mat2_ord_ptr = MEM_ORD_ADDR + mat2_ptr;
-    int matAns_ord_ptr = MEM_ORD_ADDR + matAns_ptr;
+    int mat1_ord_ptr = MEM8_ORD_ADDR + mat1_ptr;
+    int mat2_ord_ptr = MEM8_ORD_ADDR + mat2_ptr;
+    int matAns_ord_ptr = MEM8_ORD_ADDR + matAns_ptr;
 
-    for (int i = 0; i < MEM_LENGTH; i++)
+    for (int i = 0; i < MEM8_LENGTH; i++)
     {
         mem[i] = 0;
     }
@@ -130,13 +137,13 @@ int main()
     {
         for (int PE_i = 0; PE_i < PE_COUNT; PE_i++)
         {
-            int add_addr = MEM_TMP_ADDR + PE_i * 2 * PE_MAT_SIZE * PE_MAT_SIZE;
+            int add_addr = MEM8_TMP_ADDR + PE_i * 2 * PE_MAT_SIZE * PE_MAT_SIZE;
             int mul_addr = add_addr + PE_MAT_SIZE * PE_MAT_SIZE;
 
-            //clear add matrix
+            // clear add matrix
             for (int k = 0; k < PE_MAT_SIZE * PE_MAT_SIZE; k++)
             {
-                mem[add_addr + k]=0;
+                mem[add_addr + k] = 0;
             }
 
             for (int j = 0; j < MAT_SIZE / PE_MAT_SIZE; j++)
