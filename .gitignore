@@ -1,4 +1,6 @@
 *.txt
+.vscode
+algorithm/main.exe
 bd/
 ip_repo/
 testing/
