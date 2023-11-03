@@ -1,1 +1,7 @@
 *.txt
+bd/
+ip_repo/
+testing/
+vitis_project/
+vivado_project/
+.vscode/
