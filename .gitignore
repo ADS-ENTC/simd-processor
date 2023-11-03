@@ -1,1 +1,3 @@
 *.txt
+.vscode
+algorithm/main.exe
