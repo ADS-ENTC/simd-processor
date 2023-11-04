@@ -48,7 +48,14 @@ end
 endgenerate
 
 always_ff@(posedge clk) begin
-    if (valid_buffer[DEPTH]) begin
+    if (resetn == 1'b0) begin
+        for (int i=0; i<N; i++) begin
+            for (int j=0; j<N; j++) begin
+                result[i][j] <= 0;
+            end
+        end
+    end
+    else if (valid_buffer[DEPTH]) begin
         for (int i=0; i<N; i++) begin
             for (int j=0; j<N; j++) begin
                 result[i][j] <= $signed(result[i][j]) + $signed(partial_sum[i][j][DEPTH][0]);
@@ -57,16 +64,6 @@ always_ff@(posedge clk) begin
     end         
 
     valid_out <= valid_buffer[DEPTH];
-end
-
-always_ff@(negedge resetn) begin
-    if (resetn == 0'b0) begin
-        for (int i=0; i<N; i++) begin
-            for (int j=0; j<N; j++) begin
-                result[i][j] <= 0;
-            end
-        end
-    end
 end
 
 endmodule
