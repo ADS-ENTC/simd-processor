@@ -48,7 +48,7 @@ end
 endgenerate
 
 always_ff@(posedge clk) begin
-    if (resetn == 1'b1) begin
+    if (resetn == 1'b0) begin
         for (int i=0; i<N; i++) begin
             for (int j=0; j<N; j++) begin
                 result[i][j] <= 0;
