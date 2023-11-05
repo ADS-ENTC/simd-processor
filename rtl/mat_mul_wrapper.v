@@ -1,7 +1,7 @@
 module mat_mul_wrapper#(
     parameter W_IN = 8,
     parameter W_OUT = 32,
-    parameter N = 8
+    parameter N = 4
 )(
     input wire clk, resetn, valid_in,
     input wire signed [2*N*N*W_IN-1:0] data_in, 
