@@ -3,21 +3,33 @@
 module mat_mul_tb;
     localparam W_IN = 8;
     localparam W_OUT = 32;
-    localparam N = 8;
+    localparam N = 4;
 
     localparam delay = $clog2(N) + 2;
 
     logic clk, resetn, valid_in, valid_out;
-    logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_1, matrix_2;
+    // logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_1, matrix_2;
+    logic signed [2*N*N*W_IN-1:0] data_in;
     logic signed [N-1:0][N-1:0][W_OUT-1:0] result, exp_result;
 
-    mat_mul #(.W_IN(W_IN), .W_OUT(W_OUT), .N(N)) dut (.*);
+    mat_mul_wrapper #(.W_IN(W_IN), .W_OUT(W_OUT), .N(N)) dut (.clk(clk), .resetn(resetn), .valid_in(valid_in), .data_in(data_in), .valid_out(valid_out), .result(result));
+    // mat_mul #(.W_IN(W_IN), .W_OUT(W_OUT), .N(N)) dut (.*);
 
     logic signed [N-1:0][4*N-1:0][W_IN-1:0] big_matrix_1;
     logic signed [4*N-1:0][N-1:0][W_IN-1:0] big_matrix_2;
 
+    logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_1;
+    logic signed [N-1:0][N-1:0][W_IN-1:0] matrix_2;
+
     int start_index;
     int valid_out_count;
+
+    covergroup cg;
+        cp_matrix_1: coverpoint matrix_1;
+        cp_matrix_2: coverpoint matrix_2;
+    endgroup
+
+    cg cg_inst;
 
     // simulating the clock
     initial begin
@@ -27,7 +39,9 @@ module mat_mul_tb;
 
     // simulating the device functionality
     initial begin
-        $srandom(56);
+        cg_inst = new();
+        
+        $srandom(1);
         valid_in = 0;
         repeat (10) begin
             // making random big matrices
@@ -61,10 +75,14 @@ module mat_mul_tb;
                     end
                 end
 
+                data_in = {matrix_2, matrix_1};
+
                 start_index += N;
 
                 if (valid_out)
                     valid_out_count += 1;
+                
+                cg_inst.sample();
             end
 
             @(posedge clk);
@@ -98,6 +116,9 @@ module mat_mul_tb;
             else
                 $error("Output does not match: result = %p, exp_result = %p", result, exp_result);
         end
+        
+        $display("Matrix 1 Coverage: %0.2f %%", cg_inst.cp_matrix_1.get_inst_coverage());
+        $display("Matrix 2 Coverage: %0.2f %%", cg_inst.cp_matrix_2.get_inst_coverage());
         
         $stop;
     end

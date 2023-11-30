@@ -47,8 +47,8 @@ for (m1_row_num = 0; m1_row_num < N; m1_row_num = m1_row_num + 1) begin: m1_row_
 end
 endgenerate
 
-always_ff@(posedge clk  or negedge resetn) begin
-    if (resetn == 0'b0) begin
+always_ff@(posedge clk) begin
+    if (resetn == 1'b0) begin
         for (int i=0; i<N; i++) begin
             for (int j=0; j<N; j++) begin
                 result[i][j] <= 0;
@@ -61,7 +61,7 @@ always_ff@(posedge clk  or negedge resetn) begin
                 result[i][j] <= $signed(result[i][j]) + $signed(partial_sum[i][j][DEPTH][0]);
             end
         end
-    end
+    end         
 
     valid_out <= valid_buffer[DEPTH];
 end
