@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 
 module fetch_unit_tb;
+    parameter BRAM_DEPATH = 10;
     parameter integer MATRIX_SIZE = 2;
     parameter integer W_IN = 8;
     parameter integer C_S00_AXI_DATA_WIDTH	= 32;
@@ -9,10 +10,11 @@ module fetch_unit_tb;
     parameter integer C_M00_AXIS_START_COUNT	= 32;
     parameter integer C_S00_AXIS_TDATA_WIDTH	= 32;
 
-    wire  [2*MATRIX_SIZE*MATRIX_SIZE*W_IN-1 : 0] DATA_FU2PE_1;
-    wire  [2*MATRIX_SIZE*MATRIX_SIZE*W_IN-1 : 0] DATA_FU2PE_2;
-    wire  [2*MATRIX_SIZE*MATRIX_SIZE*W_IN-1 : 0] DATA_FU2PE_3;
-    wire  [2*MATRIX_SIZE*MATRIX_SIZE*W_IN-1 : 0] DATA_FU2PE_4;
+    wire [BRAM_DEPATH-1:0] mat_a_addr;
+    wire [31:0] mat_a_din;
+    wire mat_a_en;
+    wire mat_a_we;
+    wire mat_a_clk;
 
     wire VALID_FU2PE;
 
@@ -21,10 +23,7 @@ module fetch_unit_tb;
     reg [MATRIX_SIZE*MATRIX_SIZE*C_M00_AXIS_TDATA_WIDTH-1:0] DATA_PE2FU_3;
     reg [MATRIX_SIZE*MATRIX_SIZE*C_M00_AXIS_TDATA_WIDTH-1:0] DATA_PE2FU_4;
 
-    reg VALID_PE2FU_1;
-    reg VALID_PE2FU_2;
-    reg VALID_PE2FU_3;
-    reg VALID_PE2FU_4;
+    reg VALID_PE2FU;
     // User ports ends
     // Do not modify the ports beyond this line
 
@@ -71,6 +70,7 @@ module fetch_unit_tb;
     reg  s00_axis_tvalid;
 
     fetch_unit_v1_0 # ( 
+        .BRAM_DEPATH(BRAM_DEPATH),
         .MATRIX_SIZE(MATRIX_SIZE),
         .W_IN(W_IN),
         .C_S00_AXI_DATA_WIDTH(C_S00_AXI_DATA_WIDTH),
@@ -79,19 +79,17 @@ module fetch_unit_tb;
         .C_M00_AXIS_START_COUNT(C_M00_AXIS_START_COUNT),
         .C_S00_AXIS_TDATA_WIDTH(C_S00_AXIS_TDATA_WIDTH)
     ) fetch_unit_v1_0_inst (
-        .DATA_FU2PE_1(DATA_FU2PE_1),
-        .DATA_FU2PE_2(DATA_FU2PE_2),
-        .DATA_FU2PE_3(DATA_FU2PE_3),
-        .DATA_FU2PE_4(DATA_FU2PE_4),
+        .mat_a_addr(mat_a_addr),
+        .mat_a_din(mat_a_din),
+        .mat_a_en(mat_a_en),
+        .mat_a_we(mat_a_we),
+        .mat_a_clk(mat_a_clk),
         .VALID_FU2PE(VALID_FU2PE),
         .DATA_PE2FU_1(DATA_PE2FU_1),
         .DATA_PE2FU_2(DATA_PE2FU_2),
         .DATA_PE2FU_3(DATA_PE2FU_3),
         .DATA_PE2FU_4(DATA_PE2FU_4),
-        .VALID_PE2FU_1(VALID_PE2FU_1),
-        .VALID_PE2FU_2(VALID_PE2FU_2),
-        .VALID_PE2FU_3(VALID_PE2FU_3),
-        .VALID_PE2FU_4(VALID_PE2FU_4),
+        .VALID_PE2FU(VALID_PE2FU),
         .s00_axi_aclk(s00_axi_aclk),
         .s00_axi_aresetn(s00_axi_aresetn),
         .s00_axi_awaddr(s00_axi_awaddr),
@@ -131,7 +129,13 @@ module fetch_unit_tb;
 
     initial begin
         s00_axis_aclk = 0;
-        forever #5 s00_axis_aclk = ~s00_axis_aclk;
+        m00_axis_aclk = 0;
+        forever begin
+            #5;
+            s00_axis_aclk = ~s00_axis_aclk;
+            m00_axis_aclk = ~m00_axis_aclk;
+        end
+        
     end
 
     initial begin
@@ -142,21 +146,21 @@ module fetch_unit_tb;
         #20 s00_axis_tvalid = 1;
 
         #1;
-        s00_axis_tdata = 5;
+        s00_axis_tdata = 1;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 8;
+        s00_axis_tdata = 1;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 2;
+        s00_axis_tdata = 1;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 3;
+        s00_axis_tdata = 1;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 4;
+        s00_axis_tdata = 1;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 5;
+        s00_axis_tdata = 1;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 6;
+        s00_axis_tdata = 1;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 7;
+        s00_axis_tdata = 1;
         // s00_axis_tlast = 1;
         @(negedge s00_axis_aclk);
         s00_axis_tvalid = 0;
@@ -185,6 +189,20 @@ module fetch_unit_tb;
         @(negedge s00_axis_aclk);
         s00_axis_tvalid = 0;
         s00_axis_tlast = 0;
+    end
+
+    initial begin
+        m00_axis_aresetn = 0;
+        #10 m00_axis_aresetn = 1;
+        @(negedge m00_axis_aclk);
+        VALID_PE2FU = 1;
+        DATA_PE2FU_1 = 3;
+        DATA_PE2FU_2 = 4;
+        DATA_PE2FU_3 = 5;
+        DATA_PE2FU_4 = 6;
+        @(negedge m00_axis_aclk);
+        VALID_PE2FU = 0;
+        #30 m00_axis_tready = 1;
 
 
     end
