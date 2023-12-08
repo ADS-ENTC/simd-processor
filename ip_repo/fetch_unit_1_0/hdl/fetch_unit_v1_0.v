@@ -164,6 +164,7 @@
 		.instr_din(instr_din),
 		.instr_en(instr_en),
 		.bram_sel(bram_sel),
+		.row_width(row_width),
 		.VALID_FU2PE(VALID_FU2PE),
 		.S_AXIS_ACLK(s00_axis_aclk),
 		.S_AXIS_ARESETN(s00_axis_aresetn),
