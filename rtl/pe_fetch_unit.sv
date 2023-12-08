@@ -11,7 +11,7 @@ module pe_fetch_unit #(
     input logic [DATA_LEN*PE_ELEMENTS-1:0] pe_stage_1_output,
     input logic [DATA_LEN-1:0] pe_stage_2_output,
 
-    output logic stop, debug,
+    output logic stop,
     output logic [PE_OPCODE_LEN-1:0] pe_opcode,
     output logic [DATA_LEN*PE_ELEMENTS-1:0] data_a, data_b
 );
@@ -33,10 +33,13 @@ logic [DRAM_ADDR_WIDTH-1:0] res_addr;
 logic [INST_LEN-1:0] instruction;
 logic [PC_LEN-1:0] pc;
 logic [DATA_LEN*PE_ELEMENTS-1:0] result;
+logic [DRAM_ADDR_WIDTH-1:0] data_addr;
 
 // hardwired connections
 assign instruction = ram_inst[pc];
+assign data_addr = instruction[OPCODE_LEN+8-1:OPCODE_LEN];
 assign stop = (instruction[OPCODE_LEN-1:0] == STOP);
+
 
 // opcode decoding
 always_comb begin
@@ -133,20 +136,16 @@ always_ff@(posedge clk) begin
     end
 end
 
-assign debug = load_b == 1;
-
 // handling internal signals
 always_ff@(posedge clk) begin
-    if (load_a == 1) begin
-        data_a <= ram_a[instruction[OPCODE_LEN+8-1:OPCODE_LEN]];
-    end
-
-    if (load_b == 1) begin
-        data_b <= ram_b[instruction[OPCODE_LEN+8-1:OPCODE_LEN]];
-    end
+    if (load_a == 1)
+        data_a <= ram_a[data_addr];
+    
+    if (load_b == 1)
+        data_b <= ram_b[data_addr];
 
     if (save_res_addr == 1) begin
-        res_addr <= instruction[OPCODE_LEN+8-1:OPCODE_LEN];
+        res_addr <= data_addr;
     end
 end
 
