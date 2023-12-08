@@ -7,8 +7,14 @@ ip_repo/fetch_unit_1_0/example_designs/
 ip_repo/fetch_unit_1_0/xgui/
 ip_repo/fetch_unit_v1_0_project/
 testing/
-vitis_project/
 vivado_project/
 .vscode/
 ip_repo/fetch_unit_1_0/fetch_unit_v1_0_project/
 *.xml
+vitis_project/.metadata/
+vitis_project/ads_mm2s/
+vitis_project/ads_app_system/
+vitis_project/ads_mm2s_system/
+vitis_project/ads_plaform/
+vitis_project/RemoteSystemsTempFiles/
+*.log
