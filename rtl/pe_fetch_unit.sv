@@ -8,17 +8,15 @@ module pe_fetch_unit #(
     parameter DRAM_DEPTH = 256
 )(
     input logic rstn, clk, pe_stage_1_valid, pe_stage_2_valid, store_result,
-    input logic [INST_LEN-1:0] instruction,
-    input logic [DATA_LEN*PE_ELEMENTS-1:0] data_a, data_b, pe_stage_1_output,
+    input logic [DATA_LEN*PE_ELEMENTS-1:0] pe_stage_1_output,
     input logic [DATA_LEN-1:0] pe_stage_2_output,
 
-    output logic stop,
+    output logic stop, debug,
     output logic [PE_OPCODE_LEN-1:0] pe_opcode,
-    output logic [PC_LEN-1:0] pc,
-    output logic [DATA_LEN*PE_ELEMENTS-1:0] result
+    output logic [DATA_LEN*PE_ELEMENTS-1:0] data_a, data_b
 );
 
-enum logic [OPCODE_LEN-1:0] {FETCH_A, FETCH_B, ADD, SUB, MUL, DOTP, STORE_TEMP_S1, STORE_TEMP_S2, STORE_RESULT, STOP} opcode; 
+typedef enum logic [OPCODE_LEN-1:0] {NOOP, FETCH_A, FETCH_B, ADD, SUB, MUL, DOTP, STORE_TEMP_S1, STORE_TEMP_S2, STORE_RESULT, STOP} OPCODE; 
 
 // local parameters
 localparam DRAM_ADDR_WIDTH = $clog2(DRAM_DEPTH);
@@ -32,6 +30,9 @@ logic [DATA_LEN*PE_ELEMENTS-1:0]ram_result[64];
 // internal signals
 logic save_res_addr, load_a, load_b;
 logic [DRAM_ADDR_WIDTH-1:0] res_addr;
+logic [INST_LEN-1:0] instruction;
+logic [PC_LEN-1:0] pc;
+logic [DATA_LEN*PE_ELEMENTS-1:0] result;
 
 // hardwired connections
 assign instruction = ram_inst[pc];
@@ -56,55 +57,55 @@ always_comb begin
             load_a = 0;
             load_b = 1;
             pe_opcode = 0;
-            save_res_addr = 0; // not checked
+            save_res_addr = 0; 
         end
         ADD: begin
             load_a = 0;
             load_b = 0;
             pe_opcode = 1;
-            save_res_addr = 0; // not checked
+            save_res_addr = 0; 
         end
         SUB: begin
             load_a = 0;
             load_b = 0;
             pe_opcode = 2;
-            save_res_addr = 0; // not checked
+            save_res_addr = 0; 
         end
         MUL: begin
             load_a = 0;
             load_b = 0;
             pe_opcode = 3;
-            save_res_addr = 0; // not checked
+            save_res_addr = 0; 
         end
         DOTP: begin
             load_a = 0;
             load_b = 0;
             pe_opcode = 4;
-            save_res_addr = 0; // not checked
+            save_res_addr = 0; 
         end
         STORE_TEMP_S1: begin
             load_a = 0;
             load_b = 0;
             pe_opcode = 5;
-            save_res_addr = 0; // not checked
+            save_res_addr = 0; 
         end
         STORE_TEMP_S2: begin
             load_a = 0;
             load_b = 0;
             pe_opcode = 6;
-            save_res_addr = 0; // not checked
+            save_res_addr = 0; 
         end
         STORE_RESULT: begin
             load_a = 0;
             load_b = 0;
             pe_opcode = 7;
-            save_res_addr = 1; // not checked
+            save_res_addr = 1; 
         end
         default: begin
             load_a = 0;
             load_b = 0;
             pe_opcode = 0;
-            save_res_addr = 0; // not checked
+            save_res_addr = 0; 
         end
     endcase
 end
@@ -132,16 +133,21 @@ always_ff@(posedge clk) begin
     end
 end
 
+assign debug = load_b == 1;
+
 // handling internal signals
 always_ff@(posedge clk) begin
-    if (load_a == 1)
+    if (load_a == 1) begin
         data_a <= ram_a[instruction[OPCODE_LEN+8-1:OPCODE_LEN]];
-    
-    if (load_b == 1)
+    end
+
+    if (load_b == 1) begin
         data_b <= ram_b[instruction[OPCODE_LEN+8-1:OPCODE_LEN]];
-    
-    if (save_res_addr == 1)
+    end
+
+    if (save_res_addr == 1) begin
         res_addr <= instruction[OPCODE_LEN+8-1:OPCODE_LEN];
+    end
 end
 
 endmodule
