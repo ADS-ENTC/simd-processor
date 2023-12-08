@@ -169,8 +169,8 @@ static int SetupIntrSystem(INTC *IntcInstancePtr, XAxiDma *AxiDmaPtr,
                            u16 TxIntrId, u16 RxIntrId);
 static void DisableIntrSystem(INTC *IntcInstancePtr, u16 TxIntrId,
                               u16 RxIntrId);
-void Write_DMA(u8 *TxBufferPtr, int length);
-void Read_DMA(u8 *RxBufferPtr, int length);
+void Execute(u8 *TxBufferPtr, u8 *RxBufferPtr);
+void Reset();
 
 /************************** Variable Definitions *****************************/
 /*
@@ -285,25 +285,30 @@ int main(void) {
         TxBufferPtr[Index] = Index / 4 + 1;
     }
 
+    Xil_DCacheFlushRange((UINTPTR)TxBufferPtr, 32 * 4);
+    Xil_DCacheFlushRange((UINTPTR)RxBufferPtr, 64 * 4);
+
     Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 2);
     Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 4, 8);
-    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 8, 4);
+    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 8, 5);
     Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 12, 8);
 
-//    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 0);
-//    Write_DMA(TxBufferPtr, 30);
-//    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 1);
-//    Write_DMA(TxBufferPtr, 30);
+    Execute(TxBufferPtr, RxBufferPtr);
+    //    Execute(TxBufferPtr, RxBufferPtr);
 
-    Write_DMA(TxBufferPtr, 30);
-
-    Read_DMA(RxBufferPtr, 64);
+    //    for (Index = 0; Index < 32 * 4; Index++) {
+    //            TxBufferPtr[Index] = 3;
+    //        }
+    //    Xil_DCacheFlushRange((UINTPTR)TxBufferPtr, 32 * 4);
+    //    Xil_DCacheFlushRange((UINTPTR)RxBufferPtr, 64 * 4);
+    //
+    //    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 0);
+    //        Execute(TxBufferPtr, RxBufferPtr);
 
     for (int i = 0; i < 64; i++) {
-        xil_printf("%d ", Xil_In32(RX_BUFFER_BASE + 4 * i));
+        xil_printf("DDR Value %d : %d\n\r", i,
+                   Xil_In32(RX_BUFFER_BASE + 4 * i));
     }
-
-    xil_printf("\n");
 
     xil_printf("Successfully ran AXI DMA interrupt Example\r\n");
 
@@ -659,11 +664,15 @@ static void DisableIntrSystem(INTC *IntcInstancePtr, u16 TxIntrId,
 #endif
 }
 
-// Write a function that takes TxBufferPtr and RxBufferPtr as arguments
-void Write_DMA(u8 *TxBufferPtr, int length) {
-    Xil_DCacheFlushRange((UINTPTR)TxBufferPtr, length * 4);
-
+void Execute(u8 *TxBufferPtr, u8 *RxBufferPtr) {
     int Status;
+    Status = XAxiDma_SimpleTransfer(&AxiDma, (UINTPTR)RxBufferPtr, 64 * 4,
+                                    XAXIDMA_DEVICE_TO_DMA);
+
+    if (Status != XST_SUCCESS) {
+        return XST_FAILURE;
+    }
+
     Status = XAxiDma_SimpleTransfer(&AxiDma, (UINTPTR)TxBufferPtr, 30 * 4,
                                     XAXIDMA_DMA_TO_DEVICE);
 
@@ -674,7 +683,11 @@ void Write_DMA(u8 *TxBufferPtr, int length) {
     Status =
         Xil_WaitForEventSet(POLL_TIMEOUT_COUNTER, NUMBER_OF_EVENTS, &Error);
     if (Status == XST_SUCCESS) {
-        xil_printf("Transmit error %d\r\n", Status);
+        if (!TxDone) {
+            xil_printf("Transmit error %d\r\n", Status);
+        } else if (Status == XST_SUCCESS && !RxDone) {
+            xil_printf("Receive error %d\r\n", Status);
+        }
     }
 
     /*
@@ -684,24 +697,6 @@ void Write_DMA(u8 *TxBufferPtr, int length) {
         Xil_WaitForEventSet(POLL_TIMEOUT_COUNTER, NUMBER_OF_EVENTS, &TxDone);
     if (Status != XST_SUCCESS) {
         xil_printf("Transmit failed %d\r\n", Status);
-    }
-}
-
-void Read_DMA(u8 *RxBufferPtr, int length) {
-    Xil_DCacheFlushRange((UINTPTR)RxBufferPtr, length * 4);
-
-    int Status;
-    Status = XAxiDma_SimpleTransfer(&AxiDma, (UINTPTR)RxBufferPtr, length * 4,
-                                    XAXIDMA_DEVICE_TO_DMA);
-
-    if (Status != XST_SUCCESS) {
-        return XST_FAILURE;
-    }
-
-    Status =
-        Xil_WaitForEventSet(POLL_TIMEOUT_COUNTER, NUMBER_OF_EVENTS, &Error);
-    if (Status == XST_SUCCESS) {
-        xil_printf("Receive error %d\r\n", Status);
     }
 
     /*
