@@ -1,4 +1,5 @@
-`timescale 1ns/1ns
+timeprecision 1ps;
+timeunit 1ns;
 
 module pe_fetch_unit_tb;
 
@@ -11,11 +12,11 @@ logic rstn, clk, pe_stage_1_valid, pe_stage_2_valid, store_result;
 logic [DATA_LEN*4-1:0] pe_stage_1_output;
 logic [DATA_LEN-1:0] pe_stage_2_output;
 
-logic stop, debug;
+logic stop;
 logic [3-1:0] pe_opcode;
 logic [DATA_LEN*4-1:0] data_a, data_b;
 
-pe_fetch_unit dut (.*);
+pe_fetch_unit #(.DRAM_DEPTH(64)) dut (.*);
 
 
 logic [DRAM_ADDR_WIDTH-1:0]data_addr;
@@ -54,7 +55,8 @@ initial begin
 
     dut.ram_inst[8] = {12'd0, 4'd8}; // STORE_TEMP_S2
 
-    dut.ram_inst[9] = {12'd0, 4'd9}; // STORE_RESULT
+    data_addr = $urandom_range(2**DRAM_ADDR_WIDTH-1);
+    dut.ram_inst[9] = {4'd0, data_addr, 4'd9}; // STORE_RESULT
 
     dut.ram_inst[10] = {12'd0, 4'd10}; // STOP
     
