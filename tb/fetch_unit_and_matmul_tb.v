@@ -1,8 +1,7 @@
 `timescale 1ns / 1ps
 
-module fetch_unit_tb;
-    parameter BRAM_DEPATH = 10;
-    parameter integer MATRIX_SIZE = 2;
+module fetch_unit_and_matmul_tb;
+    parameter integer MATRIX_SIZE = 4;
     parameter integer W_IN = 8;
     parameter integer C_S00_AXI_DATA_WIDTH	= 32;
     parameter integer C_S00_AXI_ADDR_WIDTH	= 4;
@@ -10,20 +9,21 @@ module fetch_unit_tb;
     parameter integer C_M00_AXIS_START_COUNT	= 32;
     parameter integer C_S00_AXIS_TDATA_WIDTH	= 32;
 
-    wire [BRAM_DEPATH-1:0] mat_a_addr;
-    wire [31:0] mat_a_din;
-    wire mat_a_en;
-    wire mat_a_we;
-    wire mat_a_clk;
+    wire  [2*MATRIX_SIZE*MATRIX_SIZE*W_IN-1 : 0] DATA_FU2PE_1;
+    wire  [2*MATRIX_SIZE*MATRIX_SIZE*W_IN-1 : 0] DATA_FU2PE_2;
+    wire  [2*MATRIX_SIZE*MATRIX_SIZE*W_IN-1 : 0] DATA_FU2PE_3;
+    wire  [2*MATRIX_SIZE*MATRIX_SIZE*W_IN-1 : 0] DATA_FU2PE_4;
 
     wire VALID_FU2PE;
+    wire resetn;
+    reg mm_resetn;
 
-    reg [MATRIX_SIZE*MATRIX_SIZE*C_M00_AXIS_TDATA_WIDTH-1:0] DATA_PE2FU_1;
+    wire [MATRIX_SIZE*MATRIX_SIZE*C_M00_AXIS_TDATA_WIDTH-1:0] DATA_PE2FU_1;
     reg [MATRIX_SIZE*MATRIX_SIZE*C_M00_AXIS_TDATA_WIDTH-1:0] DATA_PE2FU_2;
     reg [MATRIX_SIZE*MATRIX_SIZE*C_M00_AXIS_TDATA_WIDTH-1:0] DATA_PE2FU_3;
     reg [MATRIX_SIZE*MATRIX_SIZE*C_M00_AXIS_TDATA_WIDTH-1:0] DATA_PE2FU_4;
 
-    reg VALID_PE2FU;
+    wire VALID_PE2FU;
     // User ports ends
     // Do not modify the ports beyond this line
 
@@ -70,7 +70,6 @@ module fetch_unit_tb;
     reg  s00_axis_tvalid;
 
     fetch_unit_v1_0 # ( 
-        .BRAM_DEPATH(BRAM_DEPATH),
         .MATRIX_SIZE(MATRIX_SIZE),
         .W_IN(W_IN),
         .C_S00_AXI_DATA_WIDTH(C_S00_AXI_DATA_WIDTH),
@@ -79,12 +78,12 @@ module fetch_unit_tb;
         .C_M00_AXIS_START_COUNT(C_M00_AXIS_START_COUNT),
         .C_S00_AXIS_TDATA_WIDTH(C_S00_AXIS_TDATA_WIDTH)
     ) fetch_unit_v1_0_inst (
-        .mat_a_addr(mat_a_addr),
-        .mat_a_din(mat_a_din),
-        .mat_a_en(mat_a_en),
-        .mat_a_we(mat_a_we),
-        .mat_a_clk(mat_a_clk),
+        .DATA_FU2PE_1(DATA_FU2PE_1),
+        .DATA_FU2PE_2(DATA_FU2PE_2),
+        .DATA_FU2PE_3(DATA_FU2PE_3),
+        .DATA_FU2PE_4(DATA_FU2PE_4),
         .VALID_FU2PE(VALID_FU2PE),
+        .resetn(resetn),
         .DATA_PE2FU_1(DATA_PE2FU_1),
         .DATA_PE2FU_2(DATA_PE2FU_2),
         .DATA_PE2FU_3(DATA_PE2FU_3),
@@ -127,88 +126,133 @@ module fetch_unit_tb;
         .s00_axis_tvalid(s00_axis_tvalid)
     );
 
+    mat_mul_wrapper #(
+        .W_IN(W_IN),
+        .W_OUT(C_S00_AXIS_TDATA_WIDTH),
+        .N(MATRIX_SIZE)
+    ) mat_mul_wrapper_inst (
+        .clk(s00_axis_aclk),
+        .resetn(mm_resetn),
+        .valid_in(VALID_FU2PE),
+        .data_in(DATA_FU2PE_1),
+        .valid_out(VALID_PE2FU),
+        .result(DATA_PE2FU_1)
+    );
+
     initial begin
         s00_axis_aclk = 0;
         m00_axis_aclk = 0;
+        s00_axi_aclk = 0;
         forever begin
             #5;
             s00_axis_aclk = ~s00_axis_aclk;
             m00_axis_aclk = ~m00_axis_aclk;
+            s00_axi_aclk = ~s00_axi_aclk;
         end
         
     end
 
     initial begin
+        m00_axis_tready = 0;
+
+        s00_axis_aresetn = 0;
+        m00_axis_aresetn = 0;
+        s00_axi_aresetn = 0;
+        mm_resetn = 0;
+        #100;
+        s00_axis_aresetn = 1;
+        m00_axis_aresetn = 1;
+        s00_axi_aresetn = 1;
+        mm_resetn = 1;
+
+        #100;
+
         s00_axis_tstrb = 15;
         s00_axis_tlast = 0;
-        s00_axis_aresetn = 0;
-        #10 s00_axis_aresetn = 1;
         #20 s00_axis_tvalid = 1;
 
         #1;
         s00_axis_tdata = 1;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 1;
+        s00_axis_tdata = 2;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 1;
+        s00_axis_tdata = 3;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 1;
+        s00_axis_tdata = 4;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 1;
+        s00_axis_tdata = 5;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 1;
+        s00_axis_tdata = 6;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 1;
+        s00_axis_tdata = 7;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 1;
-        // s00_axis_tlast = 1;
+        s00_axis_tdata = 8;
         @(negedge s00_axis_aclk);
-        s00_axis_tvalid = 0;
-        s00_axis_tlast = 0;
 
-        #100;
+        s00_axis_tdata = 1;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 2;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 3;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 4;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 5;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 6;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 7;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 8;
+        @(negedge s00_axis_aclk);
 
+        s00_axis_tdata = 1;
         @(negedge s00_axis_aclk);
-        s00_axis_tvalid = 1;
-        s00_axis_tdata = 20;
+        s00_axis_tdata = 2;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 19;
+        s00_axis_tdata = 3;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 18;
+        s00_axis_tdata = 4;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 17;
+        s00_axis_tdata = 5;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 16;
+        s00_axis_tdata = 6;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 15;
+        s00_axis_tdata = 7;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 14;
+        s00_axis_tdata = 8;
         @(negedge s00_axis_aclk);
-        s00_axis_tdata = 13;
+
+
+        s00_axis_tdata = 1;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 2;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 3;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 4;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 5;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 6;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 7;
+        @(negedge s00_axis_aclk);
+        s00_axis_tdata = 8;
         s00_axis_tlast = 1;
         @(negedge s00_axis_aclk);
+
         s00_axis_tvalid = 0;
         s00_axis_tlast = 0;
+
+        #200;
+
+        m00_axis_tready = 1;
+
+        #1000;
+
+
+        $finish();
     end
-
-    initial begin
-        m00_axis_aresetn = 0;
-        #10 m00_axis_aresetn = 1;
-        @(negedge m00_axis_aclk);
-        VALID_PE2FU = 1;
-        DATA_PE2FU_1 = 3;
-        DATA_PE2FU_2 = 4;
-        DATA_PE2FU_3 = 5;
-        DATA_PE2FU_4 = 6;
-        @(negedge m00_axis_aclk);
-        VALID_PE2FU = 0;
-        #30 m00_axis_tready = 1;
-
-
-    end
-
-
-
-
 
 endmodule
