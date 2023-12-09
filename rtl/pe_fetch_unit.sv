@@ -5,7 +5,7 @@ module pe_fetch_unit #(
     parameter PC_LEN = 12,
     parameter OPCODE_LEN = 4,
     parameter PE_OPCODE_LEN = 4,
-    parameter DRAM_DEPTH = 256
+    parameter DRAM_DEPTH = 512
 )(
     input logic rstn, clk, pe_stage_1_valid, pe_stage_2_valid, store_result, valid, stop,
     input logic [PE_ELEMENTS-1:0][DATA_LEN-1:0] pe_stage_1_output,
@@ -21,7 +21,7 @@ typedef enum logic [OPCODE_LEN-1:0] {NOOP, FETCH_A, FETCH_B, ADD, SUB, MUL, DOTP
 localparam DRAM_ADDR_WIDTH = $clog2(DRAM_DEPTH);
 
 // temporary internal memories
-logic [INST_LEN-1:0]ram_inst[70];
+logic [INST_LEN-1:0]ram_inst[512];
 logic [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_a[64];
 logic [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_b[64];
 logic [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_result[64];
