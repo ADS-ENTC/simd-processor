@@ -25,7 +25,7 @@ module pe_fetch_unit #(
 
     output [DRAM_ADDR_WIDTH-1:0]ram_result_write_addr, 
     output [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_result_write_data,
-    output ram_result_wr_en,  
+    output ram_result_wr_en  
 );
 
 typedef enum logic [OPCODE_LEN-1:0] {NOOP, FETCH_A, FETCH_B, ADD, SUB, MUL, DOTP, STORE_TEMP_S1, STORE_TEMP_S2, STORE_RESULT, STOP} OPCODE; 
