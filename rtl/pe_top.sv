@@ -24,13 +24,14 @@ logic [DATA_WIDTH-1:0]pe_4_out;
 
 // internal signals
 logic [3:0][DATA_WIDTH-1:0] pe_stage_1_output_buffer[2]; 
-logic [OPCODE_WIDTH-1:0] opcode_buffer[3];
+logic [OPCODE_WIDTH-1:0] opcode_buffer[2];
 logic carry_out_1, carry_out_2, carry_out_3, carry_out_4;
 
 // signals for the summation stages
 logic [1:0][DATA_WIDTH-1:0] sum_stage_out_1;
 logic [DATA_WIDTH-1:0] sum_stage_out_2;
 logic [DATA_WIDTH-1:0] acc_output;
+logic [DATA_WIDTH-1:0] acc_output_hold;
 
 // submodules
 pe_fetch_unit fetch_unit (.*);
@@ -122,7 +123,7 @@ ADDSUB_MACRO #(
     .WIDTH(32) // Input / output bus width, 1-48
 ) ADDSUB_MACRO_inst_4 (
     .CARRYOUT(carry_out_4),
-    .RESULT(acc_output), // Add/sub result output, width defined by WIDTH parameter
+    .RESULT(acc_output_hold), // Add/sub result output, width defined by WIDTH parameter
     .A(sum_stage_out_2), // Input A bus, width defined by WIDTH parameter
     .ADD_SUB(1'b1), // 1-bit add/sub input, high selects add, low selects subtract
     .B(acc_output), // Input B bus, width defined by WIDTH parameter
@@ -142,21 +143,26 @@ end
 always@(posedge clk) begin
     opcode_buffer[0] <= pe_opcode;
     opcode_buffer[1] <= opcode_buffer[0];
-    opcode_buffer[2] <= opcode_buffer[1];
 end
 
 // connections back to the PE fetch unit
 assign pe_stage_1_output = pe_stage_1_output_buffer[1];
 assign pe_stage_2_output = acc_output;
 
-assign pe_stage_1_valid = opcode_buffer[2] == STORE_TEMP_S1;
-assign pe_stage_2_valid = opcode_buffer[2] == STORE_TEMP_S2;
-assign store_result = opcode_buffer[2] == STORE_RESULT;
+assign pe_stage_1_valid = opcode_buffer[1] == STORE_TEMP_S1;
+assign pe_stage_2_valid = opcode_buffer[1] == STORE_TEMP_S2;
+assign store_result = opcode_buffer[1] == STORE_RESULT;
 
 // clearing acc_output on store result
 always_ff@(posedge clk) begin
-    if (opcode_buffer[2] == STORE_RESULT) begin
+    if (!rstn)
         acc_output <= 0;
+    else begin
+        if (opcode_buffer[1] == STORE_TEMP_S2) begin
+            acc_output <= 0;
+        end
+        else
+            acc_output <= acc_output_hold;
     end
 end
 
