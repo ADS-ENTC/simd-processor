@@ -6,6 +6,7 @@ module bram #(
   input     logic[$clog2(DEPTH)-1:0]    addr,
   input     logic[DATA_WIDTH-1:0]       data_in,
   input     logic                       we,
+  input     logic                       re,
   output    logic[DATA_WIDTH-1:0]       data_out
 );
 
@@ -15,7 +16,9 @@ module bram #(
     if (we) begin
       mem[addr] <= data_in;
     end
-    data_out <= mem[addr];
+    if (re) begin
+      data_out <= mem[addr];
+    end
   end
 
 endmodule
