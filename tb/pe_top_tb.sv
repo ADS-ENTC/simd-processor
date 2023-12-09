@@ -32,11 +32,17 @@ initial begin
     repeat (1) begin
         for (int i=0; i<8; i++) begin
             for (int j=0; j<8; j++) begin
-                matrix_a[i][j] = 1; //$urandom_range(0, 2**32-1);
-                matrix_b[i][j] = 1; //$urandom_range(0, 2**32-1);
+                matrix_a[i][j] = 0; //$urandom_range(0, 2**32-1);
+                matrix_b[i][j] = 0; //$urandom_range(0, 2**32-1);
                 matrix_ans[i][j] = 0;
             end
         end
+
+        for (int i=0; i<8; i++) begin
+            matrix_a[i][i] = 1;
+            matrix_b[i][i] = 1;
+        end
+
 
         @(negedge clk);
         for (int i=0; i<8; i++) begin
