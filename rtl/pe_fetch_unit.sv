@@ -12,19 +12,26 @@ module pe_fetch_unit #(
     input logic [DATA_LEN-1:0] pe_stage_2_output,
 
     output logic [PE_OPCODE_LEN-1:0] pe_opcode,
-    output logic [PE_ELEMENTS-1:0][DATA_LEN-1:0] data_a, data_b
+    output logic [PE_ELEMENTS-1:0][DATA_LEN-1:0] data_a, data_b,
+
+    input [INST_LEN-1:0]inst_read_data,
+    output [PC_LEN-1:0]inst_read_addr,  
+
+    input [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_a_read_data,
+    output [DRAM_ADDR_WIDTH-1:0]ram_a_read_addr, 
+
+    input [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_b_read_data,
+    output [DRAM_ADDR_WIDTH-1:0]ram_b_read_addr, 
+
+    output [DRAM_ADDR_WIDTH-1:0]ram_result_write_addr, 
+    output [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_result_write_data,
+    output ram_result_wr_en,  
 );
 
 typedef enum logic [OPCODE_LEN-1:0] {NOOP, FETCH_A, FETCH_B, ADD, SUB, MUL, DOTP, STORE_TEMP_S1, STORE_TEMP_S2, STORE_RESULT, STOP} OPCODE; 
 
 // local parameters
 localparam DRAM_ADDR_WIDTH = $clog2(DRAM_DEPTH);
-
-// temporary internal memories
-logic [INST_LEN-1:0]ram_inst[512];
-logic [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_a[64];
-logic [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_b[64];
-logic [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_result[64];
 
 // internal signals
 logic save_res_addr, load_a, load_b;
@@ -37,8 +44,18 @@ logic pe_stage_2_valid_buffer;
 logic valid_hold;
 
 // hardwired connections
-assign instruction = ram_inst[pc];
+assign inst_read_addr = pc;
+assign instruction = inst_read_data;
+
 assign data_addr = instruction[OPCODE_LEN+8-1:OPCODE_LEN];
+assign ram_a_read_addr = data_addr;
+assign ram_b_read_addr = data_addr;
+assign data_a = ram_a_read_data;
+assign data_b = ram_b_read_data;
+
+assign ram_result_wr_en = store_result;
+assign ram_result_write_data = result;
+assign ram_result_write_addr = res_addr;
 
 // opcode decoding
 always_comb begin
@@ -138,23 +155,15 @@ end
 
 // handling outputs from the programming elements
 always_ff@(posedge clk) begin
-    if (store_result)
-        ram_result[res_addr] <= result;
-    else if (pe_stage_1_valid)
+    if (pe_stage_1_valid && !store_result)
         result <= pe_stage_1_output;
-    else if (pe_stage_2_valid_buffer) begin
+    else if (pe_stage_2_valid_buffer && !store_result) begin
         {result[DATA_LEN*PE_ELEMENTS-1:DATA_LEN], result[DATA_LEN-1:0]} <= {result[DATA_LEN*PE_ELEMENTS-DATA_LEN-1:0], pe_stage_2_output};
     end
 end
 
 // handling internal signals
 always_ff@(posedge clk) begin
-    if (load_a == 1)
-        data_a <= ram_a[data_addr];
-    
-    if (load_b == 1)
-        data_b <= ram_b[data_addr];
-
     if (save_res_addr == 1) begin
         res_addr <= data_addr;
     end
