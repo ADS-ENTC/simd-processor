@@ -56,6 +56,7 @@ always_comb begin
         STORE_TEMP_S2: out = 0;
         STORE_RESULT: out = 0;
         STOP: out = 0;
+        default: out = 0;
     endcase
 end
 
