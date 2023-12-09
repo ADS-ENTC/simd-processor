@@ -18,6 +18,7 @@
 		output [31:0] instr_din,
 		output instr_en,
 		input [1:0] bram_sel,
+		input [31:0] row_width,
 		output wire VALID_FU2PE,
 
 		input wire  S_AXIS_ACLK,
@@ -72,10 +73,31 @@
 	      end  
 	end
 
-	assign S_AXIS_TREADY = 1'b1;
+	reg [31:0] t_count;
+	wire pad;
+	wire [31:0] row_width_1;
+
+	assign row_width_1 = row_width - 1;
+	assign pad = t_count > row_width_1;
+
+	always@(posedge S_AXIS_ACLK) begin
+		if(!S_AXIS_ARESETN) begin
+			t_count <= 0;
+		end  
+		else begin
+	        if (S_AXIS_TVALID)begin
+	            t_count <= t_count + 1;
+	        end
+			if ((t_count[31:2] == row_width_1[31:2]) && (t_count[1:0] == 2'b11)) begin
+				t_count <= 0;
+	      	end  
+		end
+	end
+
+	assign S_AXIS_TREADY = pad ? 1'b0 : 1'b1;
 	
 	assign mat_a_addr = write_pointer;
-	assign mat_a_din = S_AXIS_TDATA;
+	assign mat_a_din = pad ? 0 : S_AXIS_TDATA;
 	assign mat_a_en = (bram_sel == 2'b00) & S_AXIS_TVALID;
 
 	assign mat_b_addr = write_pointer;
@@ -83,7 +105,7 @@
 	assign mat_b_en = (bram_sel == 2'b01) & S_AXIS_TVALID;
 
 	assign instr_addr = write_pointer;
-	assign instr_din = S_AXIS_TDATA;
+	assign instr_din = pad ? 0 : S_AXIS_TDATA;
 	assign instr_en = (bram_sel == 2'b10) & S_AXIS_TVALID;
 
 	assign VALID_FU2PE = (bram_sel == 2'b10) & writes_done;
