@@ -148,7 +148,7 @@ end
 
 // connections back to the PE fetch unit
 assign pe_stage_1_output = pe_stage_1_output_buffer[1];
-assign pe_stage_2_output = acc_output;
+assign pe_stage_2_output = acc_output_hold;
 
 assign pe_stage_1_valid = opcode_buffer[1] == STORE_TEMP_S1;
 assign pe_stage_2_valid = opcode_buffer[1] == STORE_TEMP_S2;
@@ -156,7 +156,7 @@ assign store_result = opcode_buffer[2] == STORE_RESULT;
 assign stop = opcode_buffer[2] == STOP;
 
 always_comb begin
-    acc_output = (opcode_buffer[1] == STORE_TEMP_S2) ? 0 : acc_output_hold;
+    acc_output = (opcode_buffer[2] == STORE_TEMP_S2) ? 0 : acc_output_hold;
 end
 
 endmodule
