@@ -13,7 +13,7 @@ module pe_fetch_unit #(
 
     output logic stop,
     output logic [PE_OPCODE_LEN-1:0] pe_opcode,
-    output logic [DATA_LEN*PE_ELEMENTS-1:0] data_a, data_b
+    output logic [PE_ELEMENTS-1:0][DATA_LEN-1:0] data_a, data_b
 );
 
 typedef enum logic [OPCODE_LEN-1:0] {NOOP, FETCH_A, FETCH_B, ADD, SUB, MUL, DOTP, STORE_TEMP_S1, STORE_TEMP_S2, STORE_RESULT, STOP} OPCODE; 
@@ -22,18 +22,19 @@ typedef enum logic [OPCODE_LEN-1:0] {NOOP, FETCH_A, FETCH_B, ADD, SUB, MUL, DOTP
 localparam DRAM_ADDR_WIDTH = $clog2(DRAM_DEPTH);
 
 // temporary internal memories
-logic [INST_LEN-1:0]ram_inst[64];
-logic [DATA_LEN*PE_ELEMENTS-1:0]ram_a[64];
-logic [DATA_LEN*PE_ELEMENTS-1:0]ram_b[64];
-logic [DATA_LEN*PE_ELEMENTS-1:0]ram_result[64];
+logic [INST_LEN-1:0]ram_inst[70];
+logic [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_a[64];
+logic [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_b[64];
+logic [PE_ELEMENTS-1:0][DATA_LEN-1:0]ram_result[64];
 
 // internal signals
 logic save_res_addr, load_a, load_b;
 logic [DRAM_ADDR_WIDTH-1:0] res_addr;
 logic [INST_LEN-1:0] instruction;
 logic [PC_LEN-1:0] pc;
-logic [DATA_LEN*PE_ELEMENTS-1:0] result;
+logic [PE_ELEMENTS-1:0][DATA_LEN-1:0] result;
 logic [DRAM_ADDR_WIDTH-1:0] data_addr;
+logic [1:0]pe_stage_2_valid_buffer;
 
 // hardwired connections
 assign instruction = ram_inst[pc];
@@ -130,9 +131,10 @@ always_ff@(posedge clk) begin
         ram_result[res_addr] <= result;
     else if (pe_stage_1_valid)
         result <= pe_stage_1_output;
-    else if (pe_stage_2_valid) begin
-        result[DATA_LEN*PE_ELEMENTS-1:DATA_LEN] <= result[DATA_LEN*PE_ELEMENTS-DATA_LEN-1:0];
-        result[DATA_LEN-1:0] <= pe_stage_2_output;
+    else if (pe_stage_2_valid_buffer[1]) begin
+        // result[DATA_LEN*PE_ELEMENTS-1:DATA_LEN] <= result[DATA_LEN*PE_ELEMENTS-DATA_LEN-1:0];
+        // result[DATA_LEN-1:0] <= pe_stage_2_output;
+        {result[DATA_LEN*PE_ELEMENTS-1:DATA_LEN], result[DATA_LEN-1:0]} <= {result[DATA_LEN*PE_ELEMENTS-DATA_LEN-1:0], pe_stage_2_output};
     end
 end
 
@@ -147,6 +149,11 @@ always_ff@(posedge clk) begin
     if (save_res_addr == 1) begin
         res_addr <= data_addr;
     end
+end
+
+// buffering the pe_stage_2_valid signal
+always_ff@(posedge clk) begin
+    pe_stage_2_valid_buffer <= {pe_stage_2_valid_buffer[0], pe_stage_2_valid};
 end
 
 endmodule

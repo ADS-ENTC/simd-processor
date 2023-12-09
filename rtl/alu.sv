@@ -13,6 +13,7 @@ typedef enum logic [OPCODE_WIDTH-1:0] {NOOP, ADD, SUB, MUL, DOTP, STORE_TEMP_S1,
 logic [31:0] add_out;
 logic [42:0] mult_out;
 logic carry_out;
+logic [OPCODE_WIDTH-1:0]opcode;
 
 ADDSUB_MACRO #(
     .DEVICE("7SERIES"), // Target Device: "VIRTEX5", "VIRTEX6", "SPARTAN6", "7SERIES"
@@ -45,7 +46,7 @@ MULT_MACRO #(
 );
 
 always_comb begin
-    unique case(opcode_in)
+    unique case(opcode)
         NOOP: out = 0;
         ADD: out = add_out;
         SUB: out = add_out;
@@ -55,6 +56,10 @@ always_comb begin
         STORE_TEMP_S2: out = 0;
         STORE_RESULT: out = 0;
     endcase
+end
+
+always_ff@(posedge clk) begin
+    opcode <= opcode_in;
 end
 
 endmodule
