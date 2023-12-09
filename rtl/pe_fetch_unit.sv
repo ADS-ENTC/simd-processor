@@ -4,14 +4,13 @@ module pe_fetch_unit #(
     parameter PE_ELEMENTS = 4,
     parameter PC_LEN = 12,
     parameter OPCODE_LEN = 4,
-    parameter PE_OPCODE_LEN = 3,
+    parameter PE_OPCODE_LEN = 4,
     parameter DRAM_DEPTH = 256
 )(
-    input logic rstn, clk, pe_stage_1_valid, pe_stage_2_valid, store_result,
-    input logic [DATA_LEN*PE_ELEMENTS-1:0] pe_stage_1_output,
+    input logic rstn, clk, pe_stage_1_valid, pe_stage_2_valid, store_result, valid, stop,
+    input logic [PE_ELEMENTS-1:0][DATA_LEN-1:0] pe_stage_1_output,
     input logic [DATA_LEN-1:0] pe_stage_2_output,
 
-    output logic stop,
     output logic [PE_OPCODE_LEN-1:0] pe_opcode,
     output logic [PE_ELEMENTS-1:0][DATA_LEN-1:0] data_a, data_b
 );
@@ -34,13 +33,12 @@ logic [INST_LEN-1:0] instruction;
 logic [PC_LEN-1:0] pc;
 logic [PE_ELEMENTS-1:0][DATA_LEN-1:0] result;
 logic [DRAM_ADDR_WIDTH-1:0] data_addr;
-logic [1:0]pe_stage_2_valid_buffer;
+logic pe_stage_2_valid_buffer;
+logic valid_hold;
 
 // hardwired connections
 assign instruction = ram_inst[pc];
 assign data_addr = instruction[OPCODE_LEN+8-1:OPCODE_LEN];
-assign stop = (instruction[OPCODE_LEN-1:0] == STOP);
-
 
 // opcode decoding
 always_comb begin
@@ -48,7 +46,7 @@ always_comb begin
         STOP: begin
             load_a = 0;
             load_b = 0;
-            pe_opcode = 0;
+            pe_opcode = 8;
             save_res_addr = 0; 
         end
         FETCH_A: begin
@@ -118,11 +116,24 @@ end
 always_ff@(posedge clk) begin
     if (!rstn) begin
         pc <= 0;
+        valid_hold <= 0;
     end
     else begin
-        if (instruction[OPCODE_LEN-1:0] != STOP)
-            pc <= pc + 1;
-    end
+        if (valid_hold == 1) begin
+            if (instruction[OPCODE_LEN-1:0] != STOP)
+                pc <= pc + 1;
+            else begin
+                valid_hold <= 0;
+                pc <= 0;
+            end
+        end
+        else begin
+            if (valid == 1) begin
+                pc <= 0;
+                valid_hold <= 1;
+            end
+        end 
+    end 
 end
 
 // handling outputs from the programming elements
@@ -131,9 +142,7 @@ always_ff@(posedge clk) begin
         ram_result[res_addr] <= result;
     else if (pe_stage_1_valid)
         result <= pe_stage_1_output;
-    else if (pe_stage_2_valid_buffer[1]) begin
-        // result[DATA_LEN*PE_ELEMENTS-1:DATA_LEN] <= result[DATA_LEN*PE_ELEMENTS-DATA_LEN-1:0];
-        // result[DATA_LEN-1:0] <= pe_stage_2_output;
+    else if (pe_stage_2_valid_buffer) begin
         {result[DATA_LEN*PE_ELEMENTS-1:DATA_LEN], result[DATA_LEN-1:0]} <= {result[DATA_LEN*PE_ELEMENTS-DATA_LEN-1:0], pe_stage_2_output};
     end
 end
@@ -153,7 +162,7 @@ end
 
 // buffering the pe_stage_2_valid signal
 always_ff@(posedge clk) begin
-    pe_stage_2_valid_buffer <= {pe_stage_2_valid_buffer[0], pe_stage_2_valid};
+    pe_stage_2_valid_buffer <= pe_stage_2_valid;
 end
 
 endmodule
