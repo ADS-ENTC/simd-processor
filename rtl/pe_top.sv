@@ -1,9 +1,29 @@
 module pe_top #(
     parameter DATA_WIDTH = 32,
-    parameter OPCODE_WIDTH = 4
+    parameter OPCODE_WIDTH = 4,
+    parameter INST_LEN = 12,
+    parameter PE_ELEMENTS = 4,
+    parameter PC_LEN = 12,
+    parameter DRAM_DEPTH = 256,
+    parameter DRAM_ADDR_WIDTH = $clog2(DRAM_DEPTH)
 )(
     input logic rstn, clk, valid,
-    output logic stop
+    output logic stop,
+
+    input logic [INST_LEN-1:0]inst_read_data,
+    output logic [PC_LEN-1:0]inst_read_addr,  
+
+    input logic [PE_ELEMENTS-1:0][DATA_WIDTH-1:0]ram_a_read_data,
+    output logic [DRAM_ADDR_WIDTH-1:0]ram_a_read_addr, 
+    output ram_a_rd_en,
+
+    input logic [PE_ELEMENTS-1:0][DATA_WIDTH-1:0]ram_b_read_data,
+    output logic [DRAM_ADDR_WIDTH-1:0]ram_b_read_addr, 
+    output logic ram_b_rd_en,
+
+    output logic [DRAM_ADDR_WIDTH-1:0]ram_result_write_addr, 
+    output logic [PE_ELEMENTS-1:0][DATA_WIDTH-1:0]ram_result_write_data,
+    output logic ram_result_wr_en
 );
 
 // instructions
