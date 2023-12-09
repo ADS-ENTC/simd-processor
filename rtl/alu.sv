@@ -1,4 +1,3 @@
-
 module alu #(
     parameter OPCODE_WIDTH = 3
 )(
@@ -6,7 +5,6 @@ module alu #(
     input logic [31:0] a,
     input logic [31:0] b,
     input logic [OPCODE_WIDTH-1:0] opcode_in,
-    output logic [OPCODE_WIDTH-1:0] opcode_out,
     output logic [31:0] out
 );
 
@@ -14,12 +12,14 @@ typedef enum logic [OPCODE_WIDTH-1:0] {NOOP, ADD, SUB, MUL, DOTP, STORE_TEMP_S1,
 
 logic [31:0] add_out;
 logic [42:0] mult_out;
+logic carry_out;
 
 ADDSUB_MACRO #(
     .DEVICE("7SERIES"), // Target Device: "VIRTEX5", "VIRTEX6", "SPARTAN6", "7SERIES"
     .LATENCY(1), // Desired clock cycle latency, 0-2
     .WIDTH(32) // Input / output bus width, 1-48
 ) ADDSUB_MACRO_inst (
+    .CARRYOUT(carry_out),
     .RESULT(add_out), // Add/sub result output, width defined by WIDTH parameter
     .A(a), // Input A bus, width defined by WIDTH parameter
     .ADD_SUB(opcode_in[0]), // 1-bit add/sub input, high selects add, low selects subtract
@@ -43,8 +43,6 @@ MULT_MACRO #(
 .CLK(clk), // 1-bit positive edge clock input
 .RST(1'b0) // 1-bit input active high reset
 );
-
-assign opcode_out = opcode_in;
 
 always_comb begin
     unique case(opcode_in)
