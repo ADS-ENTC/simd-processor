@@ -1,5 +1,5 @@
 module alu #(
-    parameter OPCODE_WIDTH = 3
+    parameter OPCODE_WIDTH = 4
 )(
     input logic clk,
     input logic [31:0] a,
@@ -8,7 +8,7 @@ module alu #(
     output logic [31:0] out
 );
 
-typedef enum logic [OPCODE_WIDTH-1:0] {NOOP, ADD, SUB, MUL, DOTP, STORE_TEMP_S1, STORE_TEMP_S2, STORE_RESULT} mode;
+typedef enum logic [OPCODE_WIDTH-1:0] {NOOP, ADD, SUB, MUL, DOTP, STORE_TEMP_S1, STORE_TEMP_S2, STORE_RESULT, STOP} mode;
 
 logic [31:0] add_out;
 logic [42:0] mult_out;
@@ -46,7 +46,7 @@ MULT_MACRO #(
 );
 
 always_comb begin
-    unique case(opcode)
+    unique0 case(opcode)
         NOOP: out = 0;
         ADD: out = add_out;
         SUB: out = add_out;
@@ -55,6 +55,7 @@ always_comb begin
         STORE_TEMP_S1: out = 0;
         STORE_TEMP_S2: out = 0;
         STORE_RESULT: out = 0;
+        STOP: out = 0;
     endcase
 end
 
