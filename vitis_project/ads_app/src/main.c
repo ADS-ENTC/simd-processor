@@ -174,8 +174,8 @@ static int SetupIntrSystem(INTC *IntcInstancePtr, XAxiDma *AxiDmaPtr,
                            u16 TxIntrId, u16 RxIntrId);
 static void DisableIntrSystem(INTC *IntcInstancePtr, u16 TxIntrId,
                               u16 RxIntrId);
-void WriteDMA(u8 *TxBufferPtr, int length);
-void ReadDMA(u8 *RxBufferPtr, int length);
+void WriteDMA(u32 *TxBufferPtr, int length);
+void ReadDMA(u32 *RxBufferPtr, int length);
 
 /************************** Variable Definitions *****************************/
 /*
@@ -222,7 +222,7 @@ u16 op_mat_mul(u16 *ins, int M, int N, int P, int W) {
                 }
                 ins[pc++] = STORE_TMP_F;
             }
-            ins[pc++] = m * P / W + p / W + 2 << OPCODE_WIDTH | STORE;
+            ins[pc++] = m * P / W + p / W + M / 4 << OPCODE_WIDTH | STORE;
         }
     }
     ins[pc++] = STOP;
@@ -322,26 +322,26 @@ int main(void) {
 
     // srand(time(NULL));
 
-    int A_row = 8;
-    int A_col = 8;
-    int B_col = 8;
+    int A_row = 16;
+    int A_col = 16;
+    int B_col = 16;
 
     u32 mat_a[A_row][A_col];
     u32 mat_b[A_col][B_col];
     u32 mat_res[A_row][B_col];
     u32 mat_got[A_row + 1][B_col];
 
-    for (size_t i = 0; i < 10; i++){
+    for (size_t count = 0; count < 5; count++) {
         // initialize mat_a and mat_b with random values
         for (int i = 0; i < A_row; i++) {
             for (int j = 0; j < A_col; j++) {
-                mat_a[i][j] = (int)rand() % 10000;
+                mat_a[i][j] = (int)rand() % 1000;
             }
         }
 
         for (int i = 0; i < A_col; i++) {
             for (int j = 0; j < B_col; j++) {
-                mat_b[i][j] = (int)rand() % 10000;
+                mat_b[i][j] = (int)rand() % 1000;
             }
         }
 
@@ -384,7 +384,7 @@ int main(void) {
         Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 2);
         WriteDMA(ins, length / 2 + 1);
 
-        ReadDMA(mat_got, A_row * B_col + 8);
+        ReadDMA(mat_got, A_row * B_col + A_row);
 
         // print mat_got
         u32 *mat_got_ptr = mat_got + 1;
@@ -416,7 +416,7 @@ int main(void) {
                 xil_printf("\n");
             }
         } else {
-            xil_printf("Test passed\n");
+            xil_printf("%d: Test passed\n", count);
         }
     }
 
@@ -772,7 +772,7 @@ static void DisableIntrSystem(INTC *IntcInstancePtr, u16 TxIntrId,
 #endif
 }
 
-void WriteDMA(u8 *TxBufferPtr, int length) {
+void WriteDMA(u32 *TxBufferPtr, int length) {
     int Status;
     Status = XAxiDma_SimpleTransfer(&AxiDma, (UINTPTR)TxBufferPtr, length * 4,
                                     XAXIDMA_DMA_TO_DEVICE);
@@ -801,7 +801,7 @@ void WriteDMA(u8 *TxBufferPtr, int length) {
     }
 }
 
-void ReadDMA(u8 *RxBufferPtr, int length) {
+void ReadDMA(u32 *RxBufferPtr, int length) {
     int Status;
     Status = XAxiDma_SimpleTransfer(&AxiDma, (UINTPTR)RxBufferPtr, length * 4,
                                     XAXIDMA_DEVICE_TO_DMA);
