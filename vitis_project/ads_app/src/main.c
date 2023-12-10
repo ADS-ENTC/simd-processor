@@ -59,6 +59,8 @@
 
 /***************************** Include Files *********************************/
 
+#include "stdlib.h"
+#include "time.h"
 #include "xaxidma.h"
 #include "xdebug.h"
 #include "xil_exception.h"
@@ -141,6 +143,9 @@
 #define POLL_TIMEOUT_COUNTER 1000000U
 #define NUMBER_OF_EVENTS 1
 
+#define INS_SIZE 4096
+#define OPCODE_WIDTH 4
+
 /* The interrupt coalescing threshold and delay timer threshold
  * Valid range is 1 to 255
  *
@@ -169,8 +174,8 @@ static int SetupIntrSystem(INTC *IntcInstancePtr, XAxiDma *AxiDmaPtr,
                            u16 TxIntrId, u16 RxIntrId);
 static void DisableIntrSystem(INTC *IntcInstancePtr, u16 TxIntrId,
                               u16 RxIntrId);
-void Execute(u8 *TxBufferPtr, u8 *RxBufferPtr);
-void Reset();
+void WriteDMA(u8 *TxBufferPtr, int length);
+void ReadDMA(u8 *RxBufferPtr, int length);
 
 /************************** Variable Definitions *****************************/
 /*
@@ -187,6 +192,42 @@ static INTC Intc; /* Instance of the Interrupt Controller */
 volatile u32 TxDone;
 volatile u32 RxDone;
 volatile u32 Error;
+
+// OPCODE Definitions
+enum Opcode {
+    NOP,
+    FETCH_A,
+    FETCH_B,
+    ADD,
+    SUB,
+    MUL,
+    DOT,
+    STORE_TMP_I,
+    STORE_TMP_F,
+    STORE,
+    STOP
+};
+
+u16 op_mat_mul(u16 *ins, int M, int N, int P, int W) {
+    u16 pc = 0;
+    ins[pc++] = NOP;
+
+    for (int m = 0; m < M; m++) {
+        for (int p = 0; p < P; p += W) {
+            for (int w = 0; w < W; w++) {
+                for (int n = 0; n < N / W; n++) {
+                    ins[pc++] = m * N / W + n << OPCODE_WIDTH | FETCH_A;
+                    ins[pc++] = (p + w) * N / W + n << OPCODE_WIDTH | FETCH_B;
+                    ins[pc++] = DOT;
+                }
+                ins[pc++] = STORE_TMP_F;
+            }
+            ins[pc++] = m * P / W + p / W + 2 << OPCODE_WIDTH | STORE;
+        }
+    }
+    ins[pc++] = STOP;
+    return pc;
+}
 
 /*****************************************************************************/
 /**
@@ -221,6 +262,7 @@ int main(void) {
     u8 *TxBufferPtr;
     u8 *RxBufferPtr;
     u8 Value;
+    u16 ins[INS_SIZE];
 
     TxBufferPtr = (u8 *)TX_BUFFER_BASE;
     RxBufferPtr = (u8 *)RX_BUFFER_BASE;
@@ -278,39 +320,105 @@ int main(void) {
 
     Value = TEST_START_VALUE;
 
-    for (Index = 0; Index < 64 * 4; Index++) {
-        TxBufferPtr[Index] = 0;
+    // srand(time(NULL));
+
+    int A_row = 8;
+    int A_col = 8;
+    int B_col = 8;
+
+    u32 mat_a[A_row][A_col];
+    u32 mat_b[A_col][B_col];
+    u32 mat_res[A_row][B_col];
+    u32 mat_got[A_row + 1][B_col];
+
+    for (size_t i = 0; i < 10; i++){
+        // initialize mat_a and mat_b with random values
+        for (int i = 0; i < A_row; i++) {
+            for (int j = 0; j < A_col; j++) {
+                mat_a[i][j] = (int)rand() % 10000;
+            }
+        }
+
+        for (int i = 0; i < A_col; i++) {
+            for (int j = 0; j < B_col; j++) {
+                mat_b[i][j] = (int)rand() % 10000;
+            }
+        }
+
+        // initialize mat_a and mat_b to identity matrix
+        // for (int i = 0; i < A_row; i++) {
+        //     for (int j = 0; j < A_col; j++) {
+        //         mat_a[i][j] = i == j ? 1 : 0;
+        //         mat_b[i][j] = i == j ? 1 : 0;
+        //     }
+        // }
+
+        // multiply mat_a and mat_b and store the result in mat_res
+        for (int i = 0; i < A_row; i++) {
+            for (int j = 0; j < B_col; j++) {
+                mat_res[i][j] = 0;
+                for (int k = 0; k < A_col; k++) {
+                    mat_res[i][j] += mat_a[i][k] * mat_b[j][k];
+                }
+            }
+        }
+
+        // print mat_res
+        Xil_DCacheFlushRange((UINTPTR)TxBufferPtr, A_row * A_col * 4);
+        Xil_DCacheFlushRange((UINTPTR)RxBufferPtr, A_col * B_col * 4);
+        Xil_DCacheFlushRange((UINTPTR)ins, INS_SIZE * 2);
+        Xil_DCacheDisable();
+
+        u16 length = op_mat_mul(ins, A_row, A_col, B_col, 4);
+
+        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 4, A_row);
+        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 8, A_col);
+        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 12, B_col);
+
+        /* code */
+
+        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 0);
+        WriteDMA(mat_a, A_row * A_col);
+        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 1);
+        WriteDMA(mat_b, A_col * B_col);
+        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 2);
+        WriteDMA(ins, length / 2 + 1);
+
+        ReadDMA(mat_got, A_row * B_col + 8);
+
+        // print mat_got
+        u32 *mat_got_ptr = mat_got + 1;
+
+        u8 is_equal = 1;
+        for (int i = 0; i < A_row; i++) {
+            for (int j = 0; j < B_col; j++) {
+                if (mat_got_ptr[i * B_col + j] != mat_res[i][j]) {
+                    is_equal = 0;
+                }
+            }
+        }
+
+        if (!is_equal) {
+            xil_printf("MATRICES ARE NOT EQUAL\n");
+            xil_printf("mat_res:\n");
+            for (int i = 0; i < A_row; i++) {
+                for (int j = 0; j < B_col; j++) {
+                    xil_printf("%d ", mat_res[i][j]);
+                }
+                xil_printf("\n");
+            }
+
+            xil_printf("mat_got:\n");
+            for (int i = 0; i < A_row; i++) {
+                for (int j = 0; j < B_col; j++) {
+                    xil_printf("%d ", mat_got_ptr[i * B_col + j]);
+                }
+                xil_printf("\n");
+            }
+        } else {
+            xil_printf("Test passed\n");
+        }
     }
-    for (Index = 0; Index < 32 * 4; Index += 4) {
-        TxBufferPtr[Index] = Index / 4 + 1;
-    }
-
-    Xil_DCacheFlushRange((UINTPTR)TxBufferPtr, 32 * 4);
-    Xil_DCacheFlushRange((UINTPTR)RxBufferPtr, 64 * 4);
-
-    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 2);
-    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 4, 8);
-    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 8, 5);
-    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 12, 8);
-
-    Execute(TxBufferPtr, RxBufferPtr);
-    //    Execute(TxBufferPtr, RxBufferPtr);
-
-    //    for (Index = 0; Index < 32 * 4; Index++) {
-    //            TxBufferPtr[Index] = 3;
-    //        }
-    //    Xil_DCacheFlushRange((UINTPTR)TxBufferPtr, 32 * 4);
-    //    Xil_DCacheFlushRange((UINTPTR)RxBufferPtr, 64 * 4);
-    //
-    //    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 0);
-    //        Execute(TxBufferPtr, RxBufferPtr);
-
-    for (int i = 0; i < 64; i++) {
-        xil_printf("DDR Value %d : %d\n\r", i,
-                   Xil_In32(RX_BUFFER_BASE + 4 * i));
-    }
-
-    xil_printf("Successfully ran AXI DMA interrupt Example\r\n");
 
     /* Disable TX and RX Ring interrupts and return success */
     DisableIntrSystem(&Intc, TX_INTR_ID, RX_INTR_ID);
@@ -664,16 +772,9 @@ static void DisableIntrSystem(INTC *IntcInstancePtr, u16 TxIntrId,
 #endif
 }
 
-void Execute(u8 *TxBufferPtr, u8 *RxBufferPtr) {
+void WriteDMA(u8 *TxBufferPtr, int length) {
     int Status;
-    Status = XAxiDma_SimpleTransfer(&AxiDma, (UINTPTR)RxBufferPtr, 64 * 4,
-                                    XAXIDMA_DEVICE_TO_DMA);
-
-    if (Status != XST_SUCCESS) {
-        return XST_FAILURE;
-    }
-
-    Status = XAxiDma_SimpleTransfer(&AxiDma, (UINTPTR)TxBufferPtr, 30 * 4,
+    Status = XAxiDma_SimpleTransfer(&AxiDma, (UINTPTR)TxBufferPtr, length * 4,
                                     XAXIDMA_DMA_TO_DEVICE);
 
     if (Status != XST_SUCCESS) {
@@ -698,10 +799,27 @@ void Execute(u8 *TxBufferPtr, u8 *RxBufferPtr) {
     if (Status != XST_SUCCESS) {
         xil_printf("Transmit failed %d\r\n", Status);
     }
+}
 
-    /*
-     * Wait for RX done or timeout
-     */
+void ReadDMA(u8 *RxBufferPtr, int length) {
+    int Status;
+    Status = XAxiDma_SimpleTransfer(&AxiDma, (UINTPTR)RxBufferPtr, length * 4,
+                                    XAXIDMA_DEVICE_TO_DMA);
+
+    if (Status != XST_SUCCESS) {
+        return XST_FAILURE;
+    }
+
+    Status =
+        Xil_WaitForEventSet(POLL_TIMEOUT_COUNTER, NUMBER_OF_EVENTS, &Error);
+    if (Status == XST_SUCCESS) {
+        if (!TxDone) {
+            xil_printf("Transmit error %d\r\n", Status);
+        } else if (Status == XST_SUCCESS && !RxDone) {
+            xil_printf("Receive error %d\r\n", Status);
+        }
+    }
+
     Status =
         Xil_WaitForEventSet(POLL_TIMEOUT_COUNTER, NUMBER_OF_EVENTS, &RxDone);
     if (Status != XST_SUCCESS) {
