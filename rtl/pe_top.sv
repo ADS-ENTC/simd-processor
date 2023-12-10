@@ -1,13 +1,33 @@
 module pe_top #(
     parameter DATA_WIDTH = 32,
-    parameter OPCODE_WIDTH = 3
+    parameter OPCODE_WIDTH = 4,
+    parameter INST_LEN = 12,
+    parameter PE_ELEMENTS = 4,
+    parameter PC_LEN = 12,
+    parameter DRAM_DEPTH = 256,
+    parameter DRAM_ADDR_WIDTH = $clog2(DRAM_DEPTH)
 )(
-    input logic rstn, clk,
-    output logic stop
+    input logic rstn, clk, valid,
+    output logic stop,
+
+    input logic [INST_LEN-1:0]inst_read_data,
+    output logic [PC_LEN-1:0]inst_read_addr,  
+
+    input logic [PE_ELEMENTS-1:0][DATA_WIDTH-1:0]ram_a_read_data,
+    output logic [DRAM_ADDR_WIDTH-1:0]ram_a_read_addr, 
+    output ram_a_rd_en,
+
+    input logic [PE_ELEMENTS-1:0][DATA_WIDTH-1:0]ram_b_read_data,
+    output logic [DRAM_ADDR_WIDTH-1:0]ram_b_read_addr, 
+    output logic ram_b_rd_en,
+
+    output logic [DRAM_ADDR_WIDTH-1:0]ram_result_write_addr, 
+    output logic [PE_ELEMENTS-1:0][DATA_WIDTH-1:0]ram_result_write_data,
+    output logic ram_result_wr_en
 );
 
 // instructions
-typedef enum logic [OPCODE_WIDTH-1:0] {NOOP, ADD, SUB, MUL, DOTP, STORE_TEMP_S1, STORE_TEMP_S2, STORE_RESULT} mode;
+typedef enum logic [OPCODE_WIDTH-1:0] {NOOP, ADD, SUB, MUL, DOTP, STORE_TEMP_S1, STORE_TEMP_S2, STORE_RESULT, STOP} mode;
 
 // signals for the fetch unit
 logic pe_stage_1_valid, pe_stage_2_valid, store_result;
@@ -24,7 +44,7 @@ logic [DATA_WIDTH-1:0]pe_4_out;
 
 // internal signals
 logic [3:0][DATA_WIDTH-1:0] pe_stage_1_output_buffer[2]; 
-logic [OPCODE_WIDTH-1:0] opcode_buffer[2];
+logic [OPCODE_WIDTH-1:0] opcode_buffer[3];
 logic carry_out_1, carry_out_2, carry_out_3, carry_out_4;
 
 // signals for the summation stages
@@ -82,7 +102,7 @@ ADDSUB_MACRO #(
     .CARRYIN(1'b0), // 1-bit carry-in input
     .CE(1'b1), // 1-bit clock enable input
     .CLK(clk), // 1-bit clock input
-    .RST(1'b0) // 1-bit active high synchronous reset
+    .RST(~rstn | valid) // 1-bit active high synchronous reset
 );
 
 ADDSUB_MACRO #(
@@ -98,7 +118,7 @@ ADDSUB_MACRO #(
     .CARRYIN(1'b0), // 1-bit carry-in input
     .CE(1'b1), // 1-bit clock enable input
     .CLK(clk), // 1-bit clock input
-    .RST(1'b0) // 1-bit active high synchronous reset
+    .RST(~rstn | valid) // 1-bit active high synchronous reset
 );
 
 ADDSUB_MACRO #(
@@ -114,7 +134,7 @@ ADDSUB_MACRO #(
     .CARRYIN(1'b0), // 1-bit carry-in input
     .CE(1'b1), // 1-bit clock enable input
     .CLK(clk), // 1-bit clock input
-    .RST(1'b0) // 1-bit active high synchronous reset
+    .RST(~rstn | valid) // 1-bit active high synchronous reset
 );
 
 ADDSUB_MACRO #(
@@ -130,7 +150,7 @@ ADDSUB_MACRO #(
     .CARRYIN(1'b0), // 1-bit carry-in input
     .CE(1'b1), // 1-bit clock enable input
     .CLK(clk), // 1-bit clock input
-    .RST(1'b0) // 1-bit active high synchronous reset
+    .RST(~rstn | valid) // 1-bit active high synchronous reset
 );
 
 // buffering the stage 1 output of PEs
@@ -143,27 +163,20 @@ end
 always@(posedge clk) begin
     opcode_buffer[0] <= pe_opcode;
     opcode_buffer[1] <= opcode_buffer[0];
+    opcode_buffer[2] <= opcode_buffer[1];
 end
 
 // connections back to the PE fetch unit
 assign pe_stage_1_output = pe_stage_1_output_buffer[1];
-assign pe_stage_2_output = acc_output;
+assign pe_stage_2_output = acc_output_hold;
 
 assign pe_stage_1_valid = opcode_buffer[1] == STORE_TEMP_S1;
 assign pe_stage_2_valid = opcode_buffer[1] == STORE_TEMP_S2;
-assign store_result = opcode_buffer[1] == STORE_RESULT;
+assign store_result = opcode_buffer[2] == STORE_RESULT;
+assign stop = opcode_buffer[2] == STOP;
 
-// clearing acc_output on store result
-always_ff@(posedge clk) begin
-    if (!rstn)
-        acc_output <= 0;
-    else begin
-        if (opcode_buffer[1] == STORE_TEMP_S2) begin
-            acc_output <= 0;
-        end
-        else
-            acc_output <= acc_output_hold;
-    end
+always_comb begin
+    acc_output = (opcode_buffer[2] == STORE_TEMP_S2) ? 0 : acc_output_hold;
 end
 
 endmodule
