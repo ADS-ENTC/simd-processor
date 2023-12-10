@@ -27,7 +27,8 @@ module pe_top #(
     output logic [DRAM_ADDR_WIDTH-1:0]ram_result_write_addr, 
     output logic [PE_ELEMENTS-1:0][DATA_WIDTH-1:0]ram_result_write_data,
     output logic ram_result_wr_en,
-    output logic ram_result_clk
+    output logic ram_result_clk,
+    output logic ram_result_wr_mask
 );
 
 // instructions
@@ -187,5 +188,6 @@ assign inst_clk = clk;
 assign ram_a_clk = clk;
 assign ram_b_clk = clk;
 assign ram_result_clk = clk;
+assign ram_result_wr_mask = 1'b1;
 
 endmodule
