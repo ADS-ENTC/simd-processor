@@ -49,23 +49,20 @@ uint16_t op_mat_mul(int M, int N, int P, int W)
     return pc;
 }
 
-
-
-void write_to_file(const char* filepath, const uint16_t* ins, int size)
+void write_to_file(const char *filepath, const uint16_t *ins, int size)
 {
-    FILE* file = fopen(filepath, "w");
+    FILE *file = fopen(filepath, "w");
     if (file == NULL)
     {
         printf("Failed to open file for writing.\n");
         return;
     }
 
-    
     for (int i = 0; i < size; i++)
     {
-        for (int j = 12 - 1; j >= 0; j--)
-            fprintf(file,"%s", (ins[i] & (1 << j)) ? "1" : "0");
-        fprintf(file,"\n");
+        for (int j = ADDR_WIDTH + OPCODE_WIDTH - 1; j >= 0; j--)
+            fprintf(file, "%s", (ins[i] & (1 << j)) ? "1" : "0");
+        fprintf(file, "\n");
     }
 
     fclose(file);
@@ -74,11 +71,9 @@ void write_to_file(const char* filepath, const uint16_t* ins, int size)
 int main()
 {
     // Your existing code here...
-    uint16_t pc=op_mat_mul(4, 4, 4, 2);
+    uint16_t pc = op_mat_mul(4, 4, 4, 2);
     // Write ins array to a file
     write_to_file("./cmds/MATMUL_4x4_4x4_2.binc.txt", ins, pc);
 
     return 0;
 }
-
-
