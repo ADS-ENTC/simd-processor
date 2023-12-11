@@ -34,7 +34,6 @@
 
 	reg mst_exec_state;  
 	reg [BRAM_DEPTH-1:0] write_pointer;
-	reg [BRAM_DEPTH-1:0] t_write_pointer;
 	reg writes_done;
 	
 	always @(posedge S_AXIS_ACLK) begin  
@@ -56,7 +55,6 @@
 		if(!S_AXIS_ARESETN) begin
 			write_pointer <= 0;
 			writes_done <= 1'b0;
-			t_write_pointer <= 0;
 		end  
 		else begin
 	        if (S_AXIS_TVALID)begin
@@ -67,7 +65,6 @@
 			if (S_AXIS_TLAST) begin
 				writes_done <= 1'b1;
 				write_pointer <= 0;
-				t_write_pointer <= write_pointer;
 			end
 			
 			if (writes_done) begin
@@ -97,15 +94,15 @@
 		end
 	end
 
-	assign S_AXIS_TREADY = (bram_sel == 2'b10) ? 1'b1 : (pad ? 1'b0 : 1'b1);
+	assign S_AXIS_TREADY = 1'b1;
 	
-	assign mat_a_addr = !S_AXIS_TVALID ? ({t_write_pointer[BRAM_DEPTH-1:2], 2'b00} + t_count[1:0]) : write_pointer;
-	assign mat_a_din = pad ? 0 : S_AXIS_TDATA;
-	assign mat_a_en = (bram_sel == 2'b00) & (S_AXIS_TVALID || (t_count != 0));
+	assign mat_a_addr = write_pointer;
+	assign mat_a_din = S_AXIS_TDATA;
+	assign mat_a_en = (bram_sel == 2'b00) & S_AXIS_TVALID;
 
-	assign mat_b_addr = !S_AXIS_TVALID ? ({t_write_pointer[BRAM_DEPTH-1:2], 2'b00} + t_count[1:0]) : write_pointer;
-	assign mat_b_din = pad ? 0 : S_AXIS_TDATA;
-	assign mat_b_en = (bram_sel == 2'b01) & (S_AXIS_TVALID || (t_count != 0));
+	assign mat_b_addr = write_pointer;
+	assign mat_b_din = S_AXIS_TDATA;
+	assign mat_b_en = (bram_sel == 2'b01) & S_AXIS_TVALID;
 
 	assign instr_addr = write_pointer;
 	assign instr_din = S_AXIS_TDATA;

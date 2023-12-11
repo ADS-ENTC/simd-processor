@@ -406,7 +406,7 @@
 		if (S_AXI_ARESETN == 1'b0) begin
 			t_res_size <= 0;
 		end else begin
-			t_res_size <= slv_reg1 * slv_reg3;
+			t_res_size <= (slv_reg1 * slv_reg3) + slv_reg1;
 		end
 	end
 

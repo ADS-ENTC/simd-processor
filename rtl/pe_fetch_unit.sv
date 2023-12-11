@@ -160,10 +160,10 @@ always_ff@(posedge clk) begin
     if (pe_stage_1_valid && !store_result)
         result <= pe_stage_1_output;
     else if (pe_stage_2_valid_buffer && !store_result) begin
-        result[0] <= pe_stage_2_output;
+        result[PE_ELEMENTS-1] <= pe_stage_2_output;
 
         for (int i=1; i<PE_ELEMENTS; i++) begin
-            result[i] <= result[i-1];
+            result[i-1] <= result[i];
         end
     end
 end

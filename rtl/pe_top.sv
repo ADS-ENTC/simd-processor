@@ -11,19 +11,24 @@ module pe_top #(
     output logic stop,
 
     input logic [INST_LEN-1:0]inst_read_data,
-    output logic [PC_LEN-1:0]inst_read_addr,  
+    output logic [PC_LEN-1:0]inst_read_addr,
+    output logic inst_clk,
 
     input logic [PE_ELEMENTS-1:0][DATA_WIDTH-1:0]ram_a_read_data,
     output logic [DRAM_ADDR_WIDTH-1:0]ram_a_read_addr, 
     output ram_a_rd_en,
+    output logic ram_a_clk,
 
     input logic [PE_ELEMENTS-1:0][DATA_WIDTH-1:0]ram_b_read_data,
     output logic [DRAM_ADDR_WIDTH-1:0]ram_b_read_addr, 
     output logic ram_b_rd_en,
+    output logic ram_b_clk,
 
     output logic [DRAM_ADDR_WIDTH-1:0]ram_result_write_addr, 
     output logic [PE_ELEMENTS-1:0][DATA_WIDTH-1:0]ram_result_write_data,
-    output logic ram_result_wr_en
+    output logic ram_result_wr_en,
+    output logic ram_result_clk,
+    output logic ram_result_wr_mask
 );
 
 // instructions
@@ -178,5 +183,11 @@ assign stop = opcode_buffer[2] == STOP;
 always_comb begin
     acc_output = (opcode_buffer[2] == STORE_TEMP_S2) ? 0 : acc_output_hold;
 end
+
+assign inst_clk = clk;
+assign ram_a_clk = clk;
+assign ram_b_clk = clk;
+assign ram_result_clk = clk;
+assign ram_result_wr_mask = 1'b1;
 
 endmodule
