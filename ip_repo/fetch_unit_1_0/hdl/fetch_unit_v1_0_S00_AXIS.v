@@ -33,7 +33,7 @@
 	parameter [1:0] IDLE = 1'b0, WRITE_FIFO  = 1'b1;
 
 	reg mst_exec_state;  
-	reg [BRAM_DEPTH-1:0] write_pointer;
+	reg [INSTR_BRAM_DEPTH-1:0] write_pointer;
 	reg writes_done;
 	
 	always @(posedge S_AXIS_ACLK) begin  
@@ -96,11 +96,11 @@
 
 	assign S_AXIS_TREADY = 1'b1;
 	
-	assign mat_a_addr = write_pointer;
+	assign mat_a_addr = write_pointer[BRAM_DEPTH-1:0];
 	assign mat_a_din = S_AXIS_TDATA;
 	assign mat_a_en = (bram_sel == 2'b00) & S_AXIS_TVALID;
 
-	assign mat_b_addr = write_pointer;
+	assign mat_b_addr = write_pointer[BRAM_DEPTH-1:0];
 	assign mat_b_din = S_AXIS_TDATA;
 	assign mat_b_en = (bram_sel == 2'b01) & S_AXIS_TVALID;
 
