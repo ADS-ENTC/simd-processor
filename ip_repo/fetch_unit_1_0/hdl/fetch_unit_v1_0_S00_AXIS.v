@@ -73,27 +73,6 @@
 	      end  
 	end
 
-	reg [31:0] t_count;
-	wire pad;
-	wire [31:0] row_width_1;
-
-	assign row_width_1 = row_width - 1;
-	assign pad = t_count > row_width_1;
-
-	always@(posedge S_AXIS_ACLK) begin
-		if(!S_AXIS_ARESETN) begin
-			t_count <= 0;
-		end  
-		else begin
-	        if (S_AXIS_TVALID || (t_count != 0))begin
-	            t_count <= t_count + 1;
-	        end
-			if ((t_count[31:2] == row_width_1[31:2]) && (t_count[1:0] == 2'b11)) begin
-				t_count <= 0;
-	      	end  
-		end
-	end
-
 	assign S_AXIS_TREADY = 1'b1;
 	
 	assign mat_a_addr = write_pointer[BRAM_DEPTH-1:0];
