@@ -82,7 +82,6 @@
     		// accept the read data and response information.
 		input wire  S_AXI_RREADY
 	);
-	reg [31:0]	t_res_size;
 
 	// AXI4LITE signals
 	reg [C_S_AXI_ADDR_WIDTH-1 : 0] 	axi_awaddr;
@@ -401,18 +400,26 @@
 	end    
 
 	// Add user logic here
+	wire [42:0]	t_res_size;
 	
-	always @(posedge S_AXI_ACLK) begin
-		if (S_AXI_ARESETN == 1'b0) begin
-			t_res_size <= 0;
-		end else begin
-			t_res_size <= (slv_reg1 * slv_reg3) + slv_reg1;
-		end
-	end
+	MULT_MACRO #(
+		.DEVICE("7SERIES"), // Target Device: "VIRTEX5", "VIRTEX6", "SPARTAN6","7SERIES"
+		.LATENCY(4), // Desired clock cycle latency, 0-4
+		.WIDTH_A(25), // Multiplier A-input bus width, 1-25
+		.WIDTH_B(18) // Multiplier B-input bus width, 1-18
+		) MULT_MACRO_inst (
+		.P(t_res_size), // Multiplier output bus, width determined by WIDTH_P parameter
+		.A(slv_reg1[25-1:0]), // Multiplier input A bus, width determined by WIDTH_A parameter
+		.B(slv_reg3[18-1:0]), // Multiplier input B bus, width determined by WIDTH_B parameter
+		.CE(1'b1), // 1-bit active high input clock enable
+		.CLK(S_AXI_ACLK), // 1-bit positive edge clock input
+		.RST(1'b0) // 1-bit input active high reset
+	);
+
 
 	assign bram_sel = slv_reg0[1:0];
 	assign row_width = slv_reg2;
-	assign res_size = t_res_size;
+	assign res_size = t_res_size + slv_reg1;
 	// User logic ends
 
 	endmodule
