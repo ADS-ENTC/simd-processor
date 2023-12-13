@@ -35,6 +35,16 @@
 	reg mst_exec_state;  
 	reg [INSTR_BRAM_DEPTH-1:0] write_pointer;
 	reg writes_done;
+	reg [31:0] row_width_square;
+
+	always@(posedge S_AXIS_ACLK) begin
+		if(!S_AXIS_ARESETN) begin
+			row_width_square <= 0;
+		end  
+		else begin
+			row_width_square <= row_width * (row_width - 1);
+		end
+	end
 	
 	always @(posedge S_AXIS_ACLK) begin  
 		if (!S_AXIS_ARESETN) begin
@@ -58,7 +68,15 @@
 		end  
 		else begin
 	        if (S_AXIS_TVALID)begin
-	            write_pointer <= write_pointer + 1;
+				if (bram_sel == 2'b01) begin
+					if (write_pointer >= row_width_square) begin
+						write_pointer <= (write_pointer - row_width_square) + 1;
+					end
+					else write_pointer <= write_pointer + row_width;
+				end
+				else 
+	            	write_pointer <= write_pointer + 1;
+		
 	            writes_done <= 1'b0;
 	        end
 
