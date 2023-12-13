@@ -321,102 +321,98 @@ int main(void) {
     Value = TEST_START_VALUE;
 
     // srand(time(NULL));
+    for (size_t num = 4; num < 17; num += 4) {
+        xil_printf("num: %d\n", num);
 
-    int A_row = 8;
-    int A_col = 8;
-    int B_col = 8;
+        int A_row = num;
+        int A_col = num;
+        int B_col = num;
 
-    u32 mat_a[A_row][A_col];
-    u32 mat_b[A_col][B_col];
-    u32 mat_res[A_row][B_col];
-    u32 mat_got[A_row][B_col];
+        u32 mat_res[A_row][B_col];
+        u32 mat_a[A_row][A_col];
+        u32 mat_b[A_col][B_col];
+        u32 mat_got[A_row][B_col];
 
-    for (size_t count = 0; count < 1; count++) {
-        // initialize mat_a and mat_b with random values
-        for (int i = 0; i < A_row; i++) {
-            for (int j = 0; j < A_col; j++) {
-                mat_a[i][j] = (int)rand() % 100;
-            }
-        }
-
-        for (int i = 0; i < A_col; i++) {
-            for (int j = 0; j < B_col; j++) {
-                mat_b[i][j] = (int)rand() % 100;
-            }
-        }
-
-        // initialize mat_a and mat_b to identity matrix
-        // for (int i = 0; i < A_row; i++) {
-        //     for (int j = 0; j < A_col; j++) {
-        //         mat_a[i][j] = i == j ? 1 : 0;
-        //         mat_b[i][j] = i == j ? 1 : 0;
-        //     }
-        // }
-
-        // multiply mat_a and mat_b and store the result in mat_res
-        for (int i = 0; i < A_row; i++) {
-            for (int j = 0; j < B_col; j++) {
-                mat_res[i][j] = 0;
-                for (int k = 0; k < A_col; k++) {
-                    mat_res[i][j] += mat_a[i][k] * mat_b[j][k];
+        for (size_t count = 0; count < 5; count++) {
+            // initialize mat_a and mat_b with random values
+            for (int i = 0; i < A_row; i++) {
+                for (int j = 0; j < A_col; j++) {
+                    mat_a[i][j] = i;
                 }
             }
-        }
 
-        // print mat_res
-        Xil_DCacheFlushRange((UINTPTR)TxBufferPtr, A_row * A_col * 4);
-        Xil_DCacheFlushRange((UINTPTR)RxBufferPtr, A_col * B_col * 4);
-        Xil_DCacheFlushRange((UINTPTR)ins, INS_SIZE * 2);
-        Xil_DCacheDisable();
-
-        u16 length = op_mat_mul(ins, A_row, A_col, B_col, 4);
-
-        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 4, A_row);
-        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 8, A_col);
-        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 12, B_col);
-
-        /* code */
-
-        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 0);
-        WriteDMA(mat_a, A_row * A_col);
-        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 1);
-        WriteDMA(mat_b, A_col * B_col);
-        Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 2);
-        WriteDMA(ins, length / 2 + 1);
-
-        ReadDMA(mat_got, A_row * B_col + 8);
-
-        // print mat_got
-        // u32 *mat_got_ptr = mat_got;
-
-        u8 is_equal = 1;
-        for (int i = 0; i < A_row; i++) {
-            for (int j = 0; j < B_col; j++) {
-                if (mat_got[i][j] != mat_res[i][j]) {
-                    is_equal = 0;
+            for (int i = 0; i < A_col; i++) {
+                for (int j = 0; j < B_col; j++) {
+                    mat_b[i][j] = i;
                 }
             }
-        }
 
-        if (!is_equal) {
-            xil_printf("MATRICES ARE NOT EQUAL\n");
-            xil_printf("mat_res:\n");
+            // multiply mat_a and mat_b and store the result in mat_res
             for (int i = 0; i < A_row; i++) {
                 for (int j = 0; j < B_col; j++) {
-                    xil_printf("%d ", mat_res[i][j]);
+                    mat_res[i][j] = 0;
+                    for (int k = 0; k < A_col; k++) {
+                        mat_res[i][j] += mat_a[i][k] * mat_b[j][k];
+                    }
                 }
-                xil_printf("\n");
             }
 
-            xil_printf("mat_got:\n");
+            // print mat_res
+            Xil_DCacheFlushRange((UINTPTR)TxBufferPtr, A_row * A_col * 4);
+            Xil_DCacheFlushRange((UINTPTR)RxBufferPtr, A_col * B_col * 4);
+            Xil_DCacheFlushRange((UINTPTR)ins, INS_SIZE * 2);
+            Xil_DCacheDisable();
+
+            u16 length = op_mat_mul(ins, A_row, A_col, B_col, 4);
+
+            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 4,
+                      A_row * B_col + 1);
+            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 8, A_col);
+            // Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 12, B_col);
+
+            /* code */
+
+            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 0);
+            WriteDMA(mat_a, A_row * A_col);
+            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 1);
+            WriteDMA(mat_b, A_col * B_col);
+            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 2);
+            WriteDMA(ins, length / 2 + 1);
+
+            ReadDMA(mat_got, A_row * B_col + 1);
+
+            // print mat_got
+            // u32 *mat_got_ptr = mat_got;
+
+            u8 is_equal = 1;
             for (int i = 0; i < A_row; i++) {
                 for (int j = 0; j < B_col; j++) {
-                    xil_printf("%d ", mat_got[i][j]);
+                    if (mat_got[i][j] != mat_res[i][j]) {
+                        is_equal = 0;
+                    }
                 }
-                xil_printf("\n");
             }
-        } else {
-            xil_printf("%d: Test passed\n", count);
+
+            if (!is_equal) {
+                xil_printf("MATRICES ARE NOT EQUAL\n");
+                xil_printf("mat_res:\n");
+                for (int i = 0; i < A_row; i++) {
+                    for (int j = 0; j < B_col; j++) {
+                        xil_printf("%d ", mat_res[i][j]);
+                    }
+                    xil_printf("\n");
+                }
+
+                xil_printf("mat_got:\n");
+                for (int i = 0; i < A_row; i++) {
+                    for (int j = 0; j < B_col; j++) {
+                        xil_printf("%d ", mat_got[i][j]);
+                    }
+                    xil_printf("\n");
+                }
+            } else {
+                xil_printf("%d: Test passed\n", count);
+            }
         }
     }
 
