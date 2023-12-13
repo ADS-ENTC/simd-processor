@@ -419,7 +419,7 @@
 
 	assign bram_sel = slv_reg0[1:0];
 	assign row_width = slv_reg2;
-	assign res_size = t_res_size + slv_reg1;
+	assign res_size = t_res_size;
 	// User logic ends
 
 	endmodule
