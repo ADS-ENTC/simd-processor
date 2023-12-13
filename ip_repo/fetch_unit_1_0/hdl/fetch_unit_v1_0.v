@@ -45,6 +45,7 @@
 		output [BRAM_DEPTH-1:0] mat_res_addr,
 		output mat_res_clk,
 		input [31:0] mat_res_dout,
+		output mat_res_ren,
 
 		input wire VALID_PE2FU,
 
@@ -138,6 +139,7 @@
 	) fetch_unit_v1_0_M00_AXIS_inst (
 		.mat_res_addr(mat_res_addr),
 		.mat_res_dout(mat_res_dout),
+		.mat_res_ren(mat_res_ren),
 		.res_size(res_size),
 		.VALID_PE2FU(VALID_PE2FU),
 		.M_AXIS_ACLK(m00_axis_aclk),
