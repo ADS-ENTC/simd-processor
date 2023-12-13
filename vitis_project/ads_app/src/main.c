@@ -313,12 +313,16 @@ int main(void) {
 
     XAxiDma_IntrEnable(&AxiDma, XAXIDMA_IRQ_ALL_MASK, XAXIDMA_DEVICE_TO_DMA);
 
+    /* Disable data cache*/
+    Xil_DCacheDisable();
+
     /* Initialize flags before start transfer test  */
     TxDone = 0;
     RxDone = 0;
     Error = 0;
 
     Value = TEST_START_VALUE;
+    
 
     // srand(time(NULL));
     for (size_t num = 4; num < 17; num += 4) {
@@ -337,13 +341,13 @@ int main(void) {
             // initialize mat_a and mat_b with random values
             for (int i = 0; i < A_row; i++) {
                 for (int j = 0; j < A_col; j++) {
-                    mat_a[i][j] = i;
+                    mat_a[i][j] = (int)rand() % 100;
                 }
             }
 
             for (int i = 0; i < A_col; i++) {
                 for (int j = 0; j < B_col; j++) {
-                    mat_b[i][j] = i;
+                    mat_b[i][j] = (int)rand() % 100;
                 }
             }
 
@@ -352,21 +356,14 @@ int main(void) {
                 for (int j = 0; j < B_col; j++) {
                     mat_res[i][j] = 0;
                     for (int k = 0; k < A_col; k++) {
-                        mat_res[i][j] += mat_a[i][k] * mat_b[j][k];
+                        mat_res[i][j] += mat_a[i][k] * mat_b[k][j];
                     }
                 }
             }
 
-            // print mat_res
-            Xil_DCacheFlushRange((UINTPTR)TxBufferPtr, A_row * A_col * 4);
-            Xil_DCacheFlushRange((UINTPTR)RxBufferPtr, A_col * B_col * 4);
-            Xil_DCacheFlushRange((UINTPTR)ins, INS_SIZE * 2);
-            Xil_DCacheDisable();
-
             u16 length = op_mat_mul(ins, A_row, A_col, B_col, 4);
 
-            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 4,
-                      A_row * B_col + 1);
+            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 4, A_row * B_col + 1);
             Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 8, A_col);
             // Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 12, B_col);
 
