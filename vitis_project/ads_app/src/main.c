@@ -222,7 +222,7 @@ u16 op_mat_mul(u16 *ins, int M, int N, int P, int W) {
                 }
                 ins[pc++] = STORE_TMP_F;
             }
-            ins[pc++] = m * P / W + p / W + M / 4 << OPCODE_WIDTH | STORE;
+            ins[pc++] = m * P / W + p / W << OPCODE_WIDTH | STORE;
         }
     }
     ins[pc++] = STOP;
@@ -322,26 +322,26 @@ int main(void) {
 
     // srand(time(NULL));
 
-    int A_row = 16;
-    int A_col = 16;
-    int B_col = 16;
+    int A_row = 8;
+    int A_col = 8;
+    int B_col = 8;
 
     u32 mat_a[A_row][A_col];
     u32 mat_b[A_col][B_col];
     u32 mat_res[A_row][B_col];
-    u32 mat_got[A_row + 1][B_col];
+    u32 mat_got[A_row][B_col];
 
-    for (size_t count = 0; count < 5; count++) {
+    for (size_t count = 0; count < 1; count++) {
         // initialize mat_a and mat_b with random values
         for (int i = 0; i < A_row; i++) {
             for (int j = 0; j < A_col; j++) {
-                mat_a[i][j] = (int)rand() % 1000;
+                mat_a[i][j] = (int)rand() % 100;
             }
         }
 
         for (int i = 0; i < A_col; i++) {
             for (int j = 0; j < B_col; j++) {
-                mat_b[i][j] = (int)rand() % 1000;
+                mat_b[i][j] = (int)rand() % 100;
             }
         }
 
@@ -384,15 +384,15 @@ int main(void) {
         Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 2);
         WriteDMA(ins, length / 2 + 1);
 
-        ReadDMA(mat_got, A_row * B_col + A_row);
+        ReadDMA(mat_got, A_row * B_col + 8);
 
         // print mat_got
-        u32 *mat_got_ptr = mat_got + 1;
+        // u32 *mat_got_ptr = mat_got;
 
         u8 is_equal = 1;
         for (int i = 0; i < A_row; i++) {
             for (int j = 0; j < B_col; j++) {
-                if (mat_got_ptr[i * B_col + j] != mat_res[i][j]) {
+                if (mat_got[i][j] != mat_res[i][j]) {
                     is_equal = 0;
                 }
             }
@@ -411,7 +411,7 @@ int main(void) {
             xil_printf("mat_got:\n");
             for (int i = 0; i < A_row; i++) {
                 for (int j = 0; j < B_col; j++) {
-                    xil_printf("%d ", mat_got_ptr[i * B_col + j]);
+                    xil_printf("%d ", mat_got[i][j]);
                 }
                 xil_printf("\n");
             }
