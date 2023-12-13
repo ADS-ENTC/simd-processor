@@ -18,6 +18,7 @@
 		input wire 						VALID_PE2FU,
 		input wire 	[31:0] 				mat_res_dout,
 		output wire	[BRAM_DEPTH-1:0] 	mat_res_addr,
+		output wire                     mat_res_ren,
 		input [31:0] res_size,
 		// User ports ends
 		// Do not modify the ports beyond this line
@@ -194,6 +195,7 @@
 
 	assign tx_en = M_AXIS_TREADY && axis_tvalid;
 	assign mat_res_addr = read_pointer;
+	assign mat_res_ren = tx_en;
 	                                                     
 	    // // Streaming output data is read from FIFO       
 	    // always @( posedge M_AXIS_ACLK )                  
