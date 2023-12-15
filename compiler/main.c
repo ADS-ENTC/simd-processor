@@ -46,6 +46,9 @@ uint16_t op_mat_mul(int M, int N, int P, int W)
         }
     }
     ins[pc++] = STOP;
+    uint16_t count = 2 + M * (P / W) * (1 + W * (1 + 3 * N / W));
+    printf("count = %d\n", count);
+    printf("pc = %d\n", pc);
     return pc;
 }
 
@@ -93,12 +96,19 @@ void write_to_file(const char *filepath, const uint16_t *ins, int size)
 int main()
 {
     // Your existing code here...
-    // uint16_t pc = op_mat_mul(4, 4, 4, 2);
-    uint16_t pc = op_elem(ADD, 8, 8, 4);
+    uint16_t pc = op_mat_mul(8, 8, 8, 4);
+    // uint16_t pc = op_elem(ADD, 8, 8, 4);
 
     // Write ins array to a file
     // write_to_file("./cmds/MATMUL_4x4_4x4_2.binc.txt", ins, pc);
-    write_to_file("./cmds/ADD_8x8_4.binc.txt", ins, pc);
+    // write_to_file("./cmds/ADD_8x8_4.binc.txt", ins, pc);
 
     return 0;
 }
+
+/**
+ formulas
+ 2+M*(P/W)*(1+W*(1+3*N/W))
+ 2+M*(P/4)*(1+4*(1+3*N/4))
+ 2+N*(N/4)*(1+4*(1+3*N/4))
+*/
