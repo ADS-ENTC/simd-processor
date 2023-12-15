@@ -49,6 +49,28 @@ uint16_t op_mat_mul(int M, int N, int P, int W)
     return pc;
 }
 
+uint16_t op_elem(int op,int M, int N, int W)
+{
+    uint16_t pc = 0;
+    uint16_t addr;
+    ins[pc++] = NOP;
+
+    for (int m = 0; m < M; m++)
+    {
+        for (int n = 0; n < N; n+=W)
+        {
+            addr = m * N / W + n / W << OPCODE_WIDTH;
+            ins[pc++] = addr | FETCH_A;
+            ins[pc++] = addr | FETCH_B;
+            ins[pc++] = op;
+            ins[pc++] = STORE_TMP_I;
+            ins[pc++] = addr | STORE;
+        }
+    }
+    ins[pc++] = STOP;
+    return pc;
+}
+
 void write_to_file(const char *filepath, const uint16_t *ins, int size)
 {
     FILE *file = fopen(filepath, "w");
@@ -71,9 +93,12 @@ void write_to_file(const char *filepath, const uint16_t *ins, int size)
 int main()
 {
     // Your existing code here...
-    uint16_t pc = op_mat_mul(4, 4, 4, 2);
+    // uint16_t pc = op_mat_mul(4, 4, 4, 2);
+    uint16_t pc = op_elem(ADD, 8, 8, 4);
+
     // Write ins array to a file
-    write_to_file("./cmds/MATMUL_4x4_4x4_2.binc.txt", ins, pc);
+    // write_to_file("./cmds/MATMUL_4x4_4x4_2.binc.txt", ins, pc);
+    write_to_file("./cmds/ADD_8x8_4.binc.txt", ins, pc);
 
     return 0;
 }
