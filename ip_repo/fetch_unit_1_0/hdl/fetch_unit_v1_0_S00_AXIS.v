@@ -33,8 +33,18 @@
 	parameter [1:0] IDLE = 1'b0, WRITE_FIFO  = 1'b1;
 
 	reg mst_exec_state;  
-	reg [BRAM_DEPTH-1:0] write_pointer;
+	reg [INSTR_BRAM_DEPTH-1:0] write_pointer;
 	reg writes_done;
+	reg [31:0] row_width_square;
+
+	always@(posedge S_AXIS_ACLK) begin
+		if(!S_AXIS_ARESETN) begin
+			row_width_square <= 0;
+		end  
+		else begin
+			row_width_square <= row_width * (row_width - 1);
+		end
+	end
 	
 	always @(posedge S_AXIS_ACLK) begin  
 		if (!S_AXIS_ARESETN) begin
@@ -58,7 +68,15 @@
 		end  
 		else begin
 	        if (S_AXIS_TVALID)begin
-	            write_pointer <= write_pointer + 1;
+				if (bram_sel == 2'b01) begin
+					if (write_pointer >= row_width_square) begin
+						write_pointer <= (write_pointer - row_width_square) + 1;
+					end
+					else write_pointer <= write_pointer + row_width;
+				end
+				else 
+	            	write_pointer <= write_pointer + 1;
+		
 	            writes_done <= 1'b0;
 	        end
 
@@ -73,34 +91,13 @@
 	      end  
 	end
 
-	reg [31:0] t_count;
-	wire pad;
-	wire [31:0] row_width_1;
-
-	assign row_width_1 = row_width - 1;
-	assign pad = t_count > row_width_1;
-
-	always@(posedge S_AXIS_ACLK) begin
-		if(!S_AXIS_ARESETN) begin
-			t_count <= 0;
-		end  
-		else begin
-	        if (S_AXIS_TVALID || (t_count != 0))begin
-	            t_count <= t_count + 1;
-	        end
-			if ((t_count[31:2] == row_width_1[31:2]) && (t_count[1:0] == 2'b11)) begin
-				t_count <= 0;
-	      	end  
-		end
-	end
-
 	assign S_AXIS_TREADY = 1'b1;
 	
-	assign mat_a_addr = write_pointer;
+	assign mat_a_addr = write_pointer[BRAM_DEPTH-1:0];
 	assign mat_a_din = S_AXIS_TDATA;
 	assign mat_a_en = (bram_sel == 2'b00) & S_AXIS_TVALID;
 
-	assign mat_b_addr = write_pointer;
+	assign mat_b_addr = write_pointer[BRAM_DEPTH-1:0];
 	assign mat_b_din = S_AXIS_TDATA;
 	assign mat_b_en = (bram_sel == 2'b01) & S_AXIS_TVALID;
 

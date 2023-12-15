@@ -82,7 +82,6 @@
     		// accept the read data and response information.
 		input wire  S_AXI_RREADY
 	);
-	reg [31:0]	t_res_size;
 
 	// AXI4LITE signals
 	reg [C_S_AXI_ADDR_WIDTH-1 : 0] 	axi_awaddr;
@@ -400,19 +399,9 @@
 	    end
 	end    
 
-	// Add user logic here
-	
-	always @(posedge S_AXI_ACLK) begin
-		if (S_AXI_ARESETN == 1'b0) begin
-			t_res_size <= 0;
-		end else begin
-			t_res_size <= (slv_reg1 * slv_reg3) + slv_reg1;
-		end
-	end
-
 	assign bram_sel = slv_reg0[1:0];
 	assign row_width = slv_reg2;
-	assign res_size = t_res_size;
+	assign res_size = slv_reg1;
 	// User logic ends
 
 	endmodule

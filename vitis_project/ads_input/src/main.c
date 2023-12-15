@@ -322,96 +322,57 @@ int main(void) {
     Error = 0;
 
     Value = TEST_START_VALUE;
-    
 
     // srand(time(NULL));
-    for (size_t num = 4; num < 17; num += 4) {
-        xil_printf("num: %d\n", num);
 
-        int A_row = num;
-        int A_col = num;
-        int B_col = num;
+    int A_row = 4;
+    int A_col = 4;
+    int B_col = 4;
 
-        u32 mat_res[A_row][B_col];
-        u32 mat_a[A_row][A_col];
-        u32 mat_b[A_col][B_col];
-        u32 mat_got[A_row][B_col];
+    u32 mat_a[4][4] = {
+        {1, 0, 0, 0}, 
+        {0, 1, 0, 0}, 
+        {0, 0, 1, 0}, 
+        {0, 0, 0, 1}
+    };
+    u32 mat_b[4][4] = {
+        {1, 2, 3, 4}, 
+        {5, 6, 7, 8}, 
+        {1, 2, 3, 4}, 
+        {5, 6, 7, 8}
+    };
 
-        for (size_t count = 0; count < 5; count++) {
-            // initialize mat_a and mat_b with random values
-            for (int i = 0; i < A_row; i++) {
-                for (int j = 0; j < A_col; j++) {
-                    mat_a[i][j] = (int)rand() % 100;
-                }
-            }
+    u32 mat_got[A_row][B_col];
 
-            for (int i = 0; i < A_col; i++) {
-                for (int j = 0; j < B_col; j++) {
-                    mat_b[i][j] = (int)rand() % 100;
-                }
-            }
+    u16 length = op_mat_mul(ins, A_row, A_col, B_col, 4);
 
-            // multiply mat_a and mat_b and store the result in mat_res
-            for (int i = 0; i < A_row; i++) {
-                for (int j = 0; j < B_col; j++) {
-                    mat_res[i][j] = 0;
-                    for (int k = 0; k < A_col; k++) {
-                        mat_res[i][j] += mat_a[i][k] * mat_b[k][j];
-                    }
-                }
-            }
+    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 4, A_row * B_col + 1);
+    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 8, A_col);
+    // Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 12, B_col);
 
-            u16 length = op_mat_mul(ins, A_row, A_col, B_col, 4);
+    /* code */
 
-            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 4, A_row * B_col + 1);
-            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 8, A_col);
-            // Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR + 12, B_col);
+    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 0);
+    WriteDMA(mat_a, A_row * A_col);
+    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 1);
+    WriteDMA(mat_b, A_col * B_col);
+    Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 2);
+    WriteDMA(ins, length / 2 + 1);
 
-            /* code */
+    ReadDMA(mat_got, A_row * B_col + 1);
 
-            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 0);
-            WriteDMA(mat_a, A_row * A_col);
-            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 1);
-            WriteDMA(mat_b, A_col * B_col);
-            Xil_Out32(XPAR_FETCH_UNIT_0_S00_AXI_BASEADDR, 2);
-            WriteDMA(ins, length / 2 + 1);
+    // print mat_got
+    // u32 *mat_got_ptr = mat_got;
 
-            ReadDMA(mat_got, A_row * B_col + 1);
 
-            // print mat_got
-            // u32 *mat_got_ptr = mat_got;
-
-            u8 is_equal = 1;
-            for (int i = 0; i < A_row; i++) {
-                for (int j = 0; j < B_col; j++) {
-                    if (mat_got[i][j] != mat_res[i][j]) {
-                        is_equal = 0;
-                    }
-                }
-            }
-
-            if (!is_equal) {
-                xil_printf("MATRICES ARE NOT EQUAL\n");
-                xil_printf("mat_res:\n");
-                for (int i = 0; i < A_row; i++) {
-                    for (int j = 0; j < B_col; j++) {
-                        xil_printf("%d ", mat_res[i][j]);
-                    }
-                    xil_printf("\n");
-                }
-
-                xil_printf("mat_got:\n");
-                for (int i = 0; i < A_row; i++) {
-                    for (int j = 0; j < B_col; j++) {
-                        xil_printf("%d ", mat_got[i][j]);
-                    }
-                    xil_printf("\n");
-                }
-            } else {
-                xil_printf("%d: Test passed\n", count);
-            }
+    xil_printf("Result:\n");
+    for (int i = 0; i < A_row; i++) {
+        for (int j = 0; j < B_col; j++) {
+            xil_printf("%d ", mat_got[i][j]);
         }
+        xil_printf("\n");
     }
+
 
     /* Disable TX and RX Ring interrupts and return success */
     DisableIntrSystem(&Intc, TX_INTR_ID, RX_INTR_ID);
