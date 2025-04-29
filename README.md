@@ -1,4 +1,4 @@
-# System-On-Chip with an Array Processor
+# SIMD Processor integrated with a System-on-Chip
 ## Overview
 
 <p align="center">
